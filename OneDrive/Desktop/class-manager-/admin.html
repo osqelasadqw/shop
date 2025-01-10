@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="ka">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ადმინ პანელი</title>
+    <script src="https://unpkg.com/@supabase/supabase-js"></script>
+    <style>
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .user-card {
+            background: white;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .user-info {
+            flex: 1;
+        }
+        .block-button {
+            background: #ff4444;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        .block-button:hover {
+            background: #ff0000;
+        }
+        .block-button:disabled {
+            background: #666;
+            cursor: not-allowed;
+        }
+        .status-badge {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 12px;
+            color: white;
+            margin-left: 10px;
+        }
+        .status-approved { background: #4CAF50; }
+        .status-blocked { background: #f44336; }
+        .status-pending { background: #2196F3; }
+        .toast {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            padding: 10px 20px;
+            border-radius: 4px;
+            color: white;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+        .toast-success { background: #4CAF50; }
+        .toast-error { background: #f44336; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>ადმინ პანელი</h1>
+        <div id="usersList"></div>
+    </div>
+
+    <script>
+        const SUPABASE_URL = 'https://loyzwjzsjnikmnuqilmv.supabase.co';
+        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxveXp3anpzam5pa21udXFpbG12Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzM1NzY2OTMsImV4cCI6MjA0OTE1MjY5M30.vwXqtGwm4SG1juWZ_YxMhhZZSiQ7TbtUcB77h6wNYus';
+        
+        const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+        function showToast(message, type) {
+            const toast = document.createElement('div');
+            toast.className = `toast toast-${type}`;
+            toast.textContent = message;
+            document.body.appendChild(toast);
+            
+            setTimeout(() => {
+                toast.style.opacity = '1';
+            }, 100);
+            
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                setTimeout(() => {
+                    document.body.removeChild(toast);
+                }, 300);
+            }, 3000);
+        }
+
+        function formatDate(timestamp) {
+            return new Date(timestamp).toLocaleString('ka-GE', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+        }
+
+        async function blockUser(code) {
+            try {
+                // Update user status
+                const { error: userError } = await supabaseClient
+                    .from('access_requests')
+                    .update({ status: 'blocked' })
+                    .eq('code', code);
+
+                if (userError) throw userError;
+
+                // Update access_time to force immediate expiration
+                const { error: timeError } = await supabaseClient
+                    .from('access_time')
+                    .update({
+                        expire_time: new Date(0).toISOString()
+                    })
+                    .eq('id', 1);
+
+                if (timeError) throw timeError;
+
+                showToast('მომხმარებელი დაიბლოკა', 'success');
+                fetchUsers(); // განვაახლოთ სია
+                window.location.href = '/class-manager-/src/pages/RequestAccess.tsx';
+            } catch (error) {
+                console.error('Error blocking user:', error);
+                showToast('დაბლოკვა ვერ მოხერხდა', 'error');
+            }
+        }
+
+        async function approveUser(code) {
+            try {
+                const { error } = await supabaseClient
+                    .from('access_requests')
+                    .update({ status: 'approved' })
+                    .eq('code', code);
+
+                if (error) throw error;
+
+                showToast('მომხმარებელი დადასტურდა', 'success');
+                fetchUsers();
+            } catch (error) {
+                console.error('Error approving user:', error);
+                showToast('დადასტურება ვერ მოხერხდა', 'error');
+            }
+        }
+
+        async function fetchUsers() {
+            try {
+                const { data, error } = await supabaseClient
+                    .from('access_requests')
+                    .select('*')
+                    .order('created_at', { ascending: false });
+
+                if (error) throw error;
+
+                const usersList = document.getElementById('usersList');
+                usersList.innerHTML = '';
+
+                if (!data || data.length === 0) {
+                    usersList.innerHTML = '<div style="text-align: center; padding: 20px; color: #666;">მომხმარებლები არ მოიძებნა</div>';
+                    return;
+                }
+
+                data.forEach(user => {
+                    const statusText = user.status === 'approved' ? 'დადასტურებული' : 
+                                     user.status === 'blocked' ? 'დაბლოკილი' : 'მოლოდინში';
+                    const statusClass = `status-${user.status}`;
+
+                    const userCard = document.createElement('div');
+                    userCard.className = 'user-card';
+                    userCard.innerHTML = `
+                        <div class="user-info">
+                            <h3>
+                                ${user.first_name && user.last_name ? `${user.first_name} ${user.last_name}` : 'უცნობი მომხმარებელი'}
+                                <span class="status-badge ${statusClass}">${statusText}</span>
+                            </h3>
+                            <p>კოდი: ${user.code}</p>
+                            <p>დრო: ${formatDate(user.created_at)}</p>
+                        </div>
+                        <div style="display: flex; gap: 10px;">
+                            ${user.status === 'pending' ? `
+                                <button 
+                                    style="background: #4CAF50"
+                                    class="block-button" 
+                                    onclick="approveUser('${user.code}')"
+                                    title="მომხმარებლის დადასტურება"
+                                >
+                                    დადასტურება
+                                </button>
+                            ` : ''}
+                            ${user.status !== 'blocked' ? `
+                                <button 
+                                    class="block-button" 
+                                    onclick="blockUser('${user.code}')"
+                                    title="მომხმარებლის დაბლოკვა"
+                                >
+                                    დაბლოკვა
+                                </button>
+                            ` : `
+                                <button 
+                                    class="block-button" 
+                                    disabled 
+                                    title="მომხმარებელი დაბლოკილია"
+                                >
+                                    დაბლოკილია
+                                </button>
+                            `}
+                        </div>
+                    `;
+                    usersList.appendChild(userCard);
+                });
+            } catch (error) {
+                console.error('Error fetching users:', error);
+                showToast('მომხმარებლების ჩატვირთვა ვერ მოხერხდა', 'error');
+            }
+        }
+
+        // Add online/offline event handlers
+        window.addEventListener('online', async () => {
+            const pendingBlocks = JSON.parse(localStorage.getItem('pendingBlocks') || '[]');
+            if (pendingBlocks.length > 0) {
+                for (const code of pendingBlocks) {
+                    try {
+                        // Update user status
+                        const { error: userError } = await supabaseClient
+                            .from('access_requests')
+                            .update({ status: 'blocked' })
+                            .eq('code', code);
+
+                        if (userError) throw userError;
+
+                        // Update access_time
+                        const { error: timeError } = await supabaseClient
+                            .from('access_time')
+                            .update({
+                                expire_time: new Date(0).toISOString()
+                            })
+                            .eq('id', 1);
+
+                        if (timeError) throw timeError;
+                    } catch (error) {
+                        console.error('Error processing pending block:', error);
+                    }
+                }
+                // Clear pending blocks
+                localStorage.removeItem('pendingBlocks');
+                showToast('შენახული მოთხოვნები დამუშავდა', 'success');
+                window.location.href = '/request';
+            }
+        });
+
+        // Initial fetch
+        fetchUsers();
+
+        // Real-time updates
+        const subscription = supabaseClient
+            .channel('admin_changes')
+            .on(
+                'postgres_changes',
+                {
+                    event: '*',
+                    schema: 'public',
+                    table: 'access_requests'
+                },
+                () => {
+                    fetchUsers();
+                }
+            )
+            .subscribe();
+    </script>
+</body>
+</html>
