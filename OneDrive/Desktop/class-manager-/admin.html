@@ -131,18 +131,13 @@
                 if (timeError) throw timeError;
 
                 showToast('მომხმარებელი დაიბლოკა', 'success');
-                
-                // გადამისამართება მცირე დაყოვნების შემდეგ
-                setTimeout(() => {
-                    // ვცდით ორივე ვარიანტს გადამისამართების
-                    try {
-                        window.location.href = 'https://class-manager-web.vercel.app/#/request';
-                    } catch (e) {
-                        window.location.replace('https://class-manager-web.vercel.app/#/request');
-                    }
-                }, 1500);
-                
                 fetchUsers(); // განვაახლოთ სია
+        
+                // გადამისამართება მთავარი გვერდიდან request გვერდზე
+                localStorage.removeItem('approvalStatus');
+                localStorage.removeItem('userCode');
+                window.location.href = '/request';
+                
             } catch (error) {
                 console.error('Error blocking user:', error);
                 showToast('დაბლოკვა ვერ მოხერხდა', 'error');
