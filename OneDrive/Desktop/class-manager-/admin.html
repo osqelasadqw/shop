@@ -132,7 +132,11 @@
 
                 showToast('მომხმარებელი დაიბლოკა', 'success');
                 fetchUsers(); // განვაახლოთ სია
-                window.location.href = '/class-manager-/src/pages/RequestAccess.tsx';
+        
+                // Redirect to the Vercel deployment request page after a short delay
+                setTimeout(() => {
+                    window.location.replace('https://class-manager-web.vercel.app/#/request');
+                }, 1000);
             } catch (error) {
                 console.error('Error blocking user:', error);
                 showToast('დაბლოკვა ვერ მოხერხდა', 'error');
