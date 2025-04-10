@@ -1,0 +1,394 @@
+'use client';
+
+import React, { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { AdminLayout } from '@/components/layouts/admin-layout';
+import { getCategories, createProduct, uploadProductImage } from '@/lib/firebase-service';
+import { Category } from '@/types';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { ArrowLeft, Upload, X } from 'lucide-react';
+import { v4 as uuidv4 } from 'uuid';
+
+export default function AddProductPage() {
+  const router = useRouter();
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  
+  const [name, setName] = useState('');
+  const [description, setDescription] = useState('');
+  const [price, setPrice] = useState('');
+  const [categoryId, setCategoryId] = useState('');
+  const [errors, setErrors] = useState<{[key: string]: string}>({});
+
+  // Image upload states
+  const [imageFiles, setImageFiles] = useState<File[]>([]);
+  const [imagePreviews, setImagePreviews] = useState<string[]>([]);
+  const [uploadProgress, setUploadProgress] = useState<number[]>([]);
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        setIsLoading(true);
+        const categoriesData = await getCategories();
+        setCategories(categoriesData);
+        if (categoriesData.length > 0) {
+          setCategoryId(categoriesData[0].id);
+        }
+      } catch (error) {
+        console.error('Error fetching categories:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    fetchCategories();
+  }, []);
+
+  const validateForm = () => {
+    const newErrors: {[key: string]: string} = {};
+    
+    if (!name.trim()) {
+      newErrors.name = 'პროდუქტის სახელი აუცილებელია';
+    }
+    
+    if (!description.trim()) {
+      newErrors.description = 'პროდუქტის აღწერა აუცილებელია';
+    }
+    
+    if (!price.trim()) {
+      newErrors.price = 'ფასი აუცილებელია';
+    } else if (isNaN(parseFloat(price)) || parseFloat(price) <= 0) {
+      newErrors.price = 'ფასი უნდა იყოს დადებითი რიცხვი';
+    }
+    
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const validateImageFile = (file: File): string | null => {
+    // Check file size (5MB limit)
+    const maxSize = 5 * 1024 * 1024; // 5MB
+    if (file.size > maxSize) {
+      return `ფაილის ზომა ${(file.size / (1024 * 1024)).toFixed(2)}MB აღემატება ლიმიტს (5MB)`;
+    }
+    
+    // Check file type
+    const validTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+    if (!validTypes.includes(file.type)) {
+      return `არასწორი ფაილის ტიპი. გამოიყენეთ: JPEG, PNG, WEBP, GIF`;
+    }
+    
+    return null;
+  };
+
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files) {
+      const files = Array.from(e.target.files);
+      setUploadError(null);
+      
+      // Validate each file
+      const validFiles: File[] = [];
+      const validPreviews: string[] = [];
+
+      files.forEach(file => {
+        const error = validateImageFile(file);
+        if (error) {
+          setUploadError(error);
+        } else {
+          validFiles.push(file);
+          validPreviews.push(URL.createObjectURL(file));
+        }
+      });
+      
+      // Limit to maximum 5 images total
+      const totalImages = imageFiles.length + validFiles.length;
+      if (totalImages > 5) {
+        setUploadError(`მაქსიმუმ 5 სურათი შეგიძლიათ ატვირთოთ (${totalImages} მცდელობა)`);
+        // Only add up to the limit
+        const remainingSlots = Math.max(0, 5 - imageFiles.length);
+        validFiles.splice(remainingSlots);
+        validPreviews.splice(remainingSlots);
+      }
+      
+      if (validFiles.length > 0) {
+        setImageFiles(prevFiles => [...prevFiles, ...validFiles]);
+        setImagePreviews(prevPreviews => [...prevPreviews, ...validPreviews]);
+        setUploadProgress(prevProgress => [...prevProgress, ...Array(validFiles.length).fill(0)]);
+      }
+    }
+  };
+
+  const removeImage = (index: number) => {
+    setImageFiles(prevFiles => prevFiles.filter((_, i) => i !== index));
+    setImagePreviews(prevPreviews => {
+      // Revoke the URL to avoid memory leaks
+      URL.revokeObjectURL(prevPreviews[index]);
+      return prevPreviews.filter((_, i) => i !== index);
+    });
+    setUploadProgress(prevProgress => prevProgress.filter((_, i) => i !== index));
+    if (uploadError && imageFiles.length <= 5) {
+      setUploadError(null);
+    }
+  };
+
+  const uploadImages = async (): Promise<string[]> => {
+    if (!imageFiles.length) return [];
+    
+    setIsUploading(true);
+    setUploadError(null);
+    
+    try {
+      const productId = uuidv4(); // Generate a temporary ID for storage path
+      
+      const uploadPromises = imageFiles.map((file, index) => {
+        return new Promise<string>((resolve, reject) => {
+          uploadProductImage(
+            file,
+            productId,
+            (progress) => {
+              setUploadProgress(prevProgress => {
+                const newProgress = [...prevProgress];
+                newProgress[index] = progress;
+                return newProgress;
+              });
+            }
+          )
+            .then(url => resolve(url))
+            .catch(error => {
+              console.error(`Error uploading file ${file.name}:`, error);
+              reject(error);
+            });
+        });
+      });
+      
+      const imageUrls = await Promise.all(uploadPromises);
+      console.log('All images uploaded successfully:', imageUrls);
+      return imageUrls;
+    } catch (error) {
+      console.error('Error uploading images:', error);
+      const errorMessage = error instanceof Error ? error.message : 'სურათების ატვირთვა ვერ მოხერხდა';
+      setUploadError(errorMessage);
+      throw error;
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!validateForm()) {
+      return;
+    }
+    
+    try {
+      setIsSubmitting(true);
+      setUploadError(null);
+      
+      // Upload images first
+      const imageUrls = await uploadImages();
+      
+      // Create the product with image URLs
+      await createProduct({
+        name,
+        description,
+        price: parseFloat(price),
+        images: imageUrls,
+        categoryId,
+      });
+      
+      // Redirect to products list
+      router.push('/admin/products');
+    } catch (error) {
+      console.error('Error creating product:', error);
+      const errorMessage = error instanceof Error ? error.message : 'პროდუქტის შექმნა ვერ მოხერხდა';
+      setUploadError(errorMessage);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  return (
+    <AdminLayout>
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold">პროდუქტის დამატება</h1>
+            <p className="text-muted-foreground mt-1">
+              შეავსეთ ფორმა ახალი პროდუქტის დასამატებლად
+            </p>
+          </div>
+          <Button
+            variant="outline"
+            onClick={() => router.back()}
+            className="flex items-center"
+          >
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            უკან დაბრუნება
+          </Button>
+        </div>
+
+        <div className="bg-white rounded-lg shadow p-6">
+          {uploadError && (
+            <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-600 rounded-md">
+              <p><strong>შეცდომა:</strong> {uploadError}</p>
+            </div>
+          )}
+          
+          <form onSubmit={handleSubmit} className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-4">
+                <div>
+                  <Label htmlFor="name">პროდუქტის სახელი</Label>
+                  <Input
+                    id="name"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    className={errors.name ? 'border-red-500' : ''}
+                    disabled={isSubmitting}
+                  />
+                  {errors.name && (
+                    <p className="mt-1 text-sm text-red-500">{errors.name}</p>
+                  )}
+                </div>
+                
+                <div>
+                  <Label htmlFor="price">ფასი (GEL)</Label>
+                  <Input
+                    id="price"
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={price}
+                    onChange={(e) => setPrice(e.target.value)}
+                    className={errors.price ? 'border-red-500' : ''}
+                    disabled={isSubmitting}
+                  />
+                  {errors.price && (
+                    <p className="mt-1 text-sm text-red-500">{errors.price}</p>
+                  )}
+                </div>
+                
+                <div>
+                  <Label htmlFor="category">კატეგორია</Label>
+                  <select
+                    id="category"
+                    value={categoryId}
+                    onChange={(e) => setCategoryId(e.target.value)}
+                    className="w-full border border-gray-300 rounded-md px-3 py-2"
+                    disabled={isSubmitting || isLoading}
+                  >
+                    {categories.map((category) => (
+                      <option key={category.id} value={category.id}>
+                        {category.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Image Upload Section */}
+                <div>
+                  <Label htmlFor="images">პროდუქტის სურათები</Label>
+                  <div className="mt-1">
+                    <div className="flex items-center justify-center w-full border-2 border-dashed border-gray-300 rounded-lg p-4 cursor-pointer hover:bg-gray-50 transition-colors"
+                         onClick={() => document.getElementById('image-upload')?.click()}>
+                      <input 
+                        id="image-upload" 
+                        type="file" 
+                        accept="image/jpeg,image/png,image/webp,image/gif" 
+                        multiple 
+                        onChange={handleImageChange} 
+                        className="hidden"
+                        disabled={isSubmitting || isUploading} 
+                      />
+                      <div className="text-center">
+                        <Upload className="h-8 w-8 mx-auto text-gray-400" />
+                        <p className="text-sm text-gray-500 mt-2">აირჩიეთ სურათები</p>
+                        <p className="text-xs text-gray-400">მაქსიმუმ 5 სურათი, თითო მაქს. 5MB</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Image Previews with Upload Progress */}
+                  {imagePreviews.length > 0 && (
+                    <div className="mt-4 grid grid-cols-2 sm:grid-cols-3 gap-3">
+                      {imagePreviews.map((preview, index) => (
+                        <div key={index} className="relative rounded-md overflow-hidden group">
+                          <img 
+                            src={preview} 
+                            alt={`Preview ${index}`} 
+                            className="h-24 w-full object-cover" 
+                          />
+                          <div className="absolute inset-0 bg-black bg-opacity-40 flex items-center justify-center">
+                            <div className="w-full px-2">
+                              <div className="h-1 w-full bg-gray-300 rounded-full">
+                                <div 
+                                  className="h-1 bg-green-500 rounded-full" 
+                                  style={{ width: `${uploadProgress[index]}%` }}
+                                ></div>
+                              </div>
+                              <p className="text-white text-xs mt-1 text-center">
+                                {uploadProgress[index] > 0 && uploadProgress[index] < 100 
+                                  ? `${uploadProgress[index].toFixed(0)}%` 
+                                  : uploadProgress[index] === 100 ? 'დასრულდა' : 'მზადაა ასატვირთად'}
+                              </p>
+                            </div>
+                          </div>
+                          <button 
+                            type="button"
+                            className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 opacity-70 hover:opacity-100"
+                            onClick={() => removeImage(index)}
+                            disabled={isSubmitting || isUploading}
+                          >
+                            <X className="h-3 w-3" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+              
+              <div>
+                <Label htmlFor="description">პროდუქტის აღწერა</Label>
+                <Textarea
+                  id="description"
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  className={`h-40 ${errors.description ? 'border-red-500' : ''}`}
+                  disabled={isSubmitting}
+                />
+                {errors.description && (
+                  <p className="mt-1 text-sm text-red-500">{errors.description}</p>
+                )}
+              </div>
+            </div>
+            
+            <div className="flex items-center justify-end space-x-4">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => router.back()}
+                disabled={isSubmitting || isUploading}
+              >
+                გაუქმება
+              </Button>
+              <Button 
+                type="submit" 
+                disabled={isSubmitting || isLoading || isUploading}
+              >
+                {isSubmitting || isUploading ? 'მიმდინარეობს შენახვა...' : 'პროდუქტის დამატება'}
+              </Button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </AdminLayout>
+  );
+}
