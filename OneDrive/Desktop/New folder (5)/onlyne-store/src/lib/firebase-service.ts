@@ -22,6 +22,8 @@ import {
 } from 'firebase/storage';
 import { db, storage } from './firebase-config';
 import { Product, Category } from '@/types';
+import { v4 as uuidv4 } from 'uuid';
+import { batchConvertToWebP } from './image-utils';
 
 // Helper function to convert Firebase timestamp to milliseconds
 const convertTimestampToMillis = (timestamp: Timestamp) => {
@@ -199,7 +201,7 @@ export const updateProduct = async (
 export const deleteProduct = async (id: string): Promise<void> => {
   // First get the product to delete its images
   const product = await getProductById(id);
-  if (product && product.images.length > 0) {
+  if (product && product.images && product.images.length > 0) {
     // Delete all associated images
     await Promise.all(
       product.images.map(async (imageUrl) => {
@@ -239,54 +241,32 @@ export const uploadProductImage = async (
         return;
       }
       
-      // Create a timestamp for the unique filename
-      const timestamp = new Date().getTime();
-      const fileName = file.name.substring(0, 50).replace(/[^a-zA-Z0-9.]/g, '_'); // Sanitize and limit filename length
-      
-      // Create a reference to the storage location
-      const storageRef = ref(storage, `products/${productId}/${timestamp}_${fileName}`);
+      // Create a unique filename with UUID
+      const uniqueId = uuidv4();
+      const storageRef = ref(storage, `images/${uniqueId}-${file.name}`);
       
       console.log('Storage reference created:', storageRef.fullPath);
-      console.log('File details:', { name: file.name, type: file.type, size: `${(file.size / 1024).toFixed(2)}KB` });
       
-      // Start the upload task with metadata
-      const metadata = {
-        contentType: file.type
-      };
-      const uploadTask = uploadBytesResumable(storageRef, file, metadata);
+      // Start the upload task
+      const uploadTask = uploadBytesResumable(storageRef, file);
       
       uploadTask.on(
         'state_changed',
         (snapshot) => {
           // Calculate and report progress
           const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-          console.log(`Upload progress: ${progress.toFixed(2)}% | Bytes: ${snapshot.bytesTransferred}/${snapshot.totalBytes}`);
+          console.log(`Upload progress: ${progress.toFixed(2)}%`);
           if (onProgress) {
             onProgress(progress);
           }
         },
         (error) => {
           console.error('Upload error:', error);
-          console.error('Error code:', error.code);
-          console.error('Error message:', error.message);
-          
-          // Handle specific Firebase storage errors
-          let errorMessage = 'Error uploading file';
-          if (error.code === 'storage/unauthorized') {
-            errorMessage = 'User does not have permission to access the object';
-          } else if (error.code === 'storage/canceled') {
-            errorMessage = 'User canceled the upload';
-          } else if (error.code === 'storage/unknown') {
-            errorMessage = 'Unknown error occurred, check network connection';
-          } else if (error.code === 'storage/quota-exceeded') {
-            errorMessage = 'Storage quota exceeded';
-          }
-          reject(new Error(`${errorMessage}: ${error.message}`));
+          reject(error);
         },
         async () => {
           try {
-            console.log('Upload completed successfully, getting download URL...');
-            // Upload completed successfully, now get the download URL
+            // Upload completed successfully, get the download URL
             const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
             console.log('Download URL obtained:', downloadURL);
             resolve(downloadURL);
@@ -354,6 +334,60 @@ export const updateUserRole = async (userId: string, isAdmin: boolean): Promise<
     });
   } catch (error) {
     console.error('Error updating user role:', error);
+    throw error;
+  }
+};
+
+/**
+ * Upload multiple images to Firebase Storage with WebP conversion
+ * @param files Array of files to upload
+ * @param progressCallback Optional callback to track upload progress for each file
+ * @returns Promise with array of download URLs
+ */
+export const uploadImagesToFirebase = async (
+  files: File[], 
+  progressCallback?: (index: number, progress: number) => void
+): Promise<string[]> => {
+  if (!files.length) return [];
+  
+  try {
+    // Convert all images to WebP format for better performance
+    const webpFiles = await batchConvertToWebP(files, 0.8);
+    
+    const uploadPromises = webpFiles.map((file, index) => {
+      return new Promise<string>((resolve, reject) => {
+        // Generate a unique filename
+        const filename = `${uuidv4()}.webp`;
+        const storageRef = ref(storage, `images/${filename}`);
+        const uploadTask = uploadBytesResumable(storageRef, file);
+
+        uploadTask.on(
+          'state_changed',
+          (snapshot) => {
+            const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+            if (progressCallback) {
+              progressCallback(index, progress);
+            }
+          },
+          (error) => {
+            console.error('Upload error:', error);
+            reject(error);
+          },
+          async () => {
+            try {
+              const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
+              resolve(downloadURL);
+            } catch (error) {
+              reject(error);
+            }
+          }
+        );
+      });
+    });
+    
+    return Promise.all(uploadPromises);
+  } catch (error) {
+    console.error('Error in uploadImagesToFirebase:', error);
     throw error;
   }
 }; 

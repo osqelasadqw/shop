@@ -59,7 +59,7 @@ export default function CartPage() {
                   <img
                     src={item.product.images[0] || 'https://placehold.co/400x400/eee/999?text=No+Image'}
                     alt={item.product.name}
-                    className="h-full w-full object-cover"
+                    className="h-full w-full object-contain"
                   />
                 </div>
 

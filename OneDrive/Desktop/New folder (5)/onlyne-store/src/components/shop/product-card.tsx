@@ -28,35 +28,47 @@ export function ProductCard({ product }: ProductCardProps) {
     : defaultImage;
 
   return (
-    <Link href={`/shop/product/${product.id}`} className="group">
-      <div className="overflow-hidden rounded-md bg-gray-100 transition-all hover:opacity-90">
-        <img
-          src={productImage}
-          alt={product.name}
-          width={400}
-          height={400}
-          className="h-60 w-full object-cover"
-        />
-      </div>
-      <div className="flex justify-between items-start mt-3">
-        <div>
-          <h3 className="font-medium text-base">{product.name}</h3>
-          <p className="mt-1 text-sm text-muted-foreground">
-            {new Intl.NumberFormat('ka-GE', {
-              style: 'currency',
-              currency: 'GEL',
-            }).format(product.price)}
-          </p>
+    <Link 
+      href={`/shop/product/${product.id}`} 
+      className="group block border rounded-lg overflow-hidden shadow-sm hover:shadow-lg transition-all bg-white"
+    >
+      {/* Single container for image, text, and button */}
+      <div className="flex flex-col h-full">
+        {/* Image container */}
+        <div className="aspect-square flex items-center justify-center relative overflow-hidden">
+          <Image
+            src={productImage}
+            alt={product.name}
+            fill
+            style={{ objectFit: 'contain' }}
+            sizes="(max-width: 640px) 50vw, (max-width: 768px) 33vw, 25vw"
+            placeholder="blur"
+            blurDataURL="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII="
+            className="group-hover:scale-105 transition-transform duration-200"
+          />
         </div>
-        <Button 
-          size="icon" 
-          variant="ghost" 
-          className="h-8 w-8 rounded-full" 
-          onClick={handleAddToCart}
-        >
-          <ShoppingCart className="h-4 w-4" />
-          <span className="sr-only">Add to cart</span>
-        </Button>
+
+        {/* Content container (name, price, button) */}
+        <div className="p-4 flex flex-col flex-grow">
+          <h3 className="font-medium text-base mb-1 flex-grow">{product.name}</h3>
+          <div className="flex justify-between items-end mt-2">
+            <p className="text-sm font-semibold text-gray-900">
+              {new Intl.NumberFormat('ka-GE', {
+                style: 'currency',
+                currency: 'GEL',
+              }).format(product.price)}
+            </p>
+            <Button 
+              size="icon" 
+              variant="ghost" 
+              className="h-8 w-8 rounded-full -mr-2 -mb-2" // Adjust margin for alignment
+              onClick={handleAddToCart}
+            >
+              <ShoppingCart className="h-4 w-4" />
+              <span className="sr-only">Add to cart</span>
+            </Button>
+          </div>
+        </div>
       </div>
     </Link>
   );

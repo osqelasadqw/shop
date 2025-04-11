@@ -183,9 +183,9 @@ export default function AdminProducts() {
               )}
             </div>
           ) : (
-            <div className="overflow-x-auto">
+            <div className="overflow-x-auto overflow-y-auto max-h-[calc(100vh-300px)]">
               <table className="w-full">
-                <thead>
+                <thead className="sticky top-0 bg-gray-50 z-10">
                   <tr className="bg-gray-50">
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       პროდუქტი
@@ -209,7 +209,7 @@ export default function AdminProducts() {
                           <div className="h-10 w-10 flex-shrink-0">
                             {product.images && product.images.length > 0 ? (
                               <img
-                                className="h-10 w-10 rounded-full object-cover"
+                                className="h-10 w-10 rounded-full object-contain bg-gray-100"
                                 src={product.images[0]}
                                 alt={product.name}
                               />
@@ -228,7 +228,7 @@ export default function AdminProducts() {
                         <div className="text-gray-900">{formatCurrency(product.price)}</div>
                       </td>
                       <td className="px-4 py-4 whitespace-nowrap">
-                        <div className="text-gray-500">{getCategoryName(product.categoryId)}</div>
+                        <div className="text-gray-500">{getCategoryName(product.categoryId ?? '')}</div>
                       </td>
                       <td className="px-4 py-4 whitespace-nowrap text-right text-sm font-medium">
                         <div className="flex items-center justify-end space-x-2">

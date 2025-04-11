@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { AdminLayout } from '@/components/layouts/admin-layout';
-import { getCategories, createProduct, uploadProductImage } from '@/lib/firebase-service';
+import { getCategories, createProduct, uploadImagesToFirebase } from '@/lib/firebase-service';
 import { Category } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -87,41 +87,35 @@ export default function AddProductPage() {
     return null;
   };
 
-  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files) {
-      const files = Array.from(e.target.files);
-      setUploadError(null);
-      
-      // Validate each file
-      const validFiles: File[] = [];
-      const validPreviews: string[] = [];
-
-      files.forEach(file => {
-        const error = validateImageFile(file);
-        if (error) {
-          setUploadError(error);
-        } else {
-          validFiles.push(file);
-          validPreviews.push(URL.createObjectURL(file));
-        }
-      });
-      
-      // Limit to maximum 5 images total
-      const totalImages = imageFiles.length + validFiles.length;
-      if (totalImages > 5) {
-        setUploadError(`მაქსიმუმ 5 სურათი შეგიძლიათ ატვირთოთ (${totalImages} მცდელობა)`);
-        // Only add up to the limit
-        const remainingSlots = Math.max(0, 5 - imageFiles.length);
-        validFiles.splice(remainingSlots);
-        validPreviews.splice(remainingSlots);
-      }
-      
-      if (validFiles.length > 0) {
-        setImageFiles(prevFiles => [...prevFiles, ...validFiles]);
-        setImagePreviews(prevPreviews => [...prevPreviews, ...validPreviews]);
-        setUploadProgress(prevProgress => [...prevProgress, ...Array(validFiles.length).fill(0)]);
-      }
+  const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files) return;
+    
+    // Check if adding these files would exceed the 5 image limit
+    if (imageFiles.length + files.length > 5) {
+      setUploadError('მაქსიმუმ 5 სურათის ატვირთვაა შესაძლებელი');
+      return;
     }
+    
+    // Check individual file sizes
+    const oversizedFiles = Array.from(files).filter(file => file.size > 5 * 1024 * 1024);
+    if (oversizedFiles.length > 0) {
+      setUploadError(`${oversizedFiles.length} სურათის ზომა აღემატება დასაშვებს (5MB)`);
+      return;
+    }
+    
+    const newFiles = Array.from(files);
+    
+    // Create previews for the files
+    const newPreviews = newFiles.map(file => URL.createObjectURL(file));
+    
+    // Update state with new files and previews
+    setImageFiles(prev => [...prev, ...newFiles]);
+    setImagePreviews(prev => [...prev, ...newPreviews]);
+    setUploadProgress(prev => [...prev, ...Array(files.length).fill(0)]);
+    
+    // Clear any previous errors
+    setUploadError(null);
   };
 
   const removeImage = (index: number) => {
@@ -144,30 +138,18 @@ export default function AddProductPage() {
     setUploadError(null);
     
     try {
-      const productId = uuidv4(); // Generate a temporary ID for storage path
+      // Use our new utility function that handles WebP conversion and uploading
+      const imageUrls = await uploadImagesToFirebase(
+        imageFiles,
+        (index, progress) => {
+          setUploadProgress(prevProgress => {
+            const newProgress = [...prevProgress];
+            newProgress[index] = progress;
+            return newProgress;
+          });
+        }
+      );
       
-      const uploadPromises = imageFiles.map((file, index) => {
-        return new Promise<string>((resolve, reject) => {
-          uploadProductImage(
-            file,
-            productId,
-            (progress) => {
-              setUploadProgress(prevProgress => {
-                const newProgress = [...prevProgress];
-                newProgress[index] = progress;
-                return newProgress;
-              });
-            }
-          )
-            .then(url => resolve(url))
-            .catch(error => {
-              console.error(`Error uploading file ${file.name}:`, error);
-              reject(error);
-            });
-        });
-      });
-      
-      const imageUrls = await Promise.all(uploadPromises);
       console.log('All images uploaded successfully:', imageUrls);
       return imageUrls;
     } catch (error) {
@@ -234,7 +216,7 @@ export default function AddProductPage() {
           </Button>
         </div>
 
-        <div className="bg-white rounded-lg shadow p-6">
+        <div className="bg-white rounded-lg shadow p-6 max-h-[calc(100vh-11rem)] overflow-y-auto">
           {uploadError && (
             <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-600 rounded-md">
               <p><strong>შეცდომა:</strong> {uploadError}</p>
@@ -317,36 +299,32 @@ export default function AddProductPage() {
 
                   {/* Image Previews with Upload Progress */}
                   {imagePreviews.length > 0 && (
-                    <div className="mt-4 grid grid-cols-2 sm:grid-cols-3 gap-3">
+                    <div className="mt-4 grid grid-cols-2 sm:grid-cols-3 gap-1">
                       {imagePreviews.map((preview, index) => (
-                        <div key={index} className="relative rounded-md overflow-hidden group">
+                        <div key={index} className="relative aspect-square border border-dashed rounded-md overflow-hidden">
                           <img 
                             src={preview} 
                             alt={`Preview ${index}`} 
-                            className="h-24 w-full object-cover" 
+                            className="w-full h-full object-contain" 
                           />
-                          <div className="absolute inset-0 bg-black bg-opacity-40 flex items-center justify-center">
-                            <div className="w-full px-2">
-                              <div className="h-1 w-full bg-gray-300 rounded-full">
-                                <div 
-                                  className="h-1 bg-green-500 rounded-full" 
-                                  style={{ width: `${uploadProgress[index]}%` }}
-                                ></div>
-                              </div>
-                              <p className="text-white text-xs mt-1 text-center">
-                                {uploadProgress[index] > 0 && uploadProgress[index] < 100 
-                                  ? `${uploadProgress[index].toFixed(0)}%` 
-                                  : uploadProgress[index] === 100 ? 'დასრულდა' : 'მზადაა ასატვირთად'}
-                              </p>
-                            </div>
+                          
+                          {/* Progress Text below image area */} 
+                          <div className="absolute bottom-0 left-0 right-0 p-1 bg-white bg-opacity-75">
+                            <p className="text-xs text-gray-700 text-center">
+                              {uploadProgress[index] > 0 && uploadProgress[index] < 100 
+                                ? `${uploadProgress[index].toFixed(0)}%` 
+                                : uploadProgress[index] === 100 ? 'დასრულდა' : 'მზადაა'}
+                            </p>
                           </div>
+                          
+                          {/* Delete button */} 
                           <button 
                             type="button"
                             className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 opacity-70 hover:opacity-100"
                             onClick={() => removeImage(index)}
                             disabled={isSubmitting || isUploading}
                           >
-                            <X className="h-3 w-3" />
+                            <X className="h-4 w-4" />
                           </button>
                         </div>
                       ))}

@@ -53,7 +53,7 @@ export function ShoppingCart() {
                                 src={item.product.images[0]}
                                 alt={item.product.name}
                                 fill
-                                className="object-cover"
+                                className="object-contain"
                               />
                             ) : (
                               <div className="bg-muted h-full w-full flex items-center justify-center">
