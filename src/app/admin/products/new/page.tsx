@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Image from 'next/image';
 import { AdminLayout } from '@/components/layouts/admin-layout';
 import { getCategories, createProduct, uploadImagesToFirebase } from '@/lib/firebase-service';
 import { Category } from '@/types';
@@ -11,6 +12,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { ArrowLeft, Upload, X } from 'lucide-react';
 import { v4 as uuidv4 } from 'uuid';
+import { toast } from 'sonner';
 
 export default function AddProductPage() {
   const router = useRouter();
@@ -69,22 +71,6 @@ export default function AddProductPage() {
     
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
-  };
-
-  const validateImageFile = (file: File): string | null => {
-    // Check file size (5MB limit)
-    const maxSize = 5 * 1024 * 1024; // 5MB
-    if (file.size > maxSize) {
-      return `ფაილის ზომა ${(file.size / (1024 * 1024)).toFixed(2)}MB აღემატება ლიმიტს (5MB)`;
-    }
-    
-    // Check file type
-    const validTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
-    if (!validTypes.includes(file.type)) {
-      return `არასწორი ფაილის ტიპი. გამოიყენეთ: JPEG, PNG, WEBP, GIF`;
-    }
-    
-    return null;
   };
 
   const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -150,7 +136,6 @@ export default function AddProductPage() {
         }
       );
       
-      console.log('All images uploaded successfully:', imageUrls);
       return imageUrls;
     } catch (error) {
       console.error('Error uploading images:', error);
@@ -302,9 +287,11 @@ export default function AddProductPage() {
                     <div className="mt-4 grid grid-cols-2 sm:grid-cols-3 gap-1">
                       {imagePreviews.map((preview, index) => (
                         <div key={index} className="relative aspect-square border border-dashed rounded-md overflow-hidden">
-                          <img 
+                          <Image 
                             src={preview} 
                             alt={`Preview ${index}`} 
+                            width={150}
+                            height={150}
                             className="w-full h-full object-contain" 
                           />
                           

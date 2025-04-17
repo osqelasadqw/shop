@@ -13,6 +13,7 @@ import {
   serverTimestamp,
   Timestamp,
   DocumentData,
+  setDoc,
 } from 'firebase/firestore';
 import {
   ref,
@@ -28,6 +29,30 @@ import { batchConvertToWebP } from './image-utils';
 // Helper function to convert Firebase timestamp to milliseconds
 const convertTimestampToMillis = (timestamp: Timestamp) => {
   return timestamp.toMillis();
+};
+
+// Settings
+export const getSettings = async () => {
+  const docRef = doc(db, 'settings', 'siteSettings'); // Assuming a single document for all settings
+  const docSnap = await getDoc(docRef);
+  
+  if (docSnap.exists()) {
+    return docSnap.data();
+  } else {
+    // Return default values or empty object if no settings found
+    return { address: '', email: '', phone: '', aboutUsContent: '' }; 
+  }
+};
+
+export const updateSettings = async (settingsData: any) => {
+  const docRef = doc(db, 'settings', 'siteSettings');
+  try {
+    // Use setDoc with merge: true to create or update the document
+    await setDoc(docRef, settingsData, { merge: true });
+  } catch (error) {
+    console.error("Error updating settings:", error);
+    throw error;
+  }
 };
 
 // Categories
@@ -198,6 +223,22 @@ export const updateProduct = async (
   return updatedProduct;
 };
 
+// ფუნქცია სპეციალური პროდუქტების მოსანიშნად
+export const markProductAsSpecial = async (id: string, isSpecial: boolean): Promise<Product> => {
+  const docRef = doc(db, 'products', id);
+  await updateDoc(docRef, {
+    isSpecial,
+    updatedAt: serverTimestamp(),
+  });
+  
+  const updatedProduct = await getProductById(id);
+  if (!updatedProduct) {
+    throw new Error('Failed to update product');
+  }
+  
+  return updatedProduct;
+};
+
 export const deleteProduct = async (id: string): Promise<void> => {
   // First get the product to delete its images
   const product = await getProductById(id);
@@ -245,7 +286,6 @@ export const uploadProductImage = async (
       const uniqueId = uuidv4();
       const storageRef = ref(storage, `images/${uniqueId}-${file.name}`);
       
-      console.log('Storage reference created:', storageRef.fullPath);
       
       // Start the upload task
       const uploadTask = uploadBytesResumable(storageRef, file);
@@ -255,7 +295,6 @@ export const uploadProductImage = async (
         (snapshot) => {
           // Calculate and report progress
           const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-          console.log(`Upload progress: ${progress.toFixed(2)}%`);
           if (onProgress) {
             onProgress(progress);
           }
@@ -268,7 +307,6 @@ export const uploadProductImage = async (
           try {
             // Upload completed successfully, get the download URL
             const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
-            console.log('Download URL obtained:', downloadURL);
             resolve(downloadURL);
           } catch (urlError) {
             console.error('Error getting download URL:', urlError);
@@ -388,6 +426,222 @@ export const uploadImagesToFirebase = async (
     return Promise.all(uploadPromises);
   } catch (error) {
     console.error('Error in uploadImagesToFirebase:', error);
+    throw error;
+  }
+};
+
+// ახალი ფუნქცია საჯარო და ფარული ფასდაკლებების დასამატებლად
+export const addDiscountToProduct = async (
+  productId: string, 
+  discountPercentage: number, 
+  isPublic: boolean, 
+  promoCode?: string
+) => {
+  try {
+    const discountId = promoCode || `discount_${productId}_${Date.now()}`;
+    
+    // მოძებნა პროდუქტის 
+    const productRef = doc(db, 'products', productId);
+    const productSnapshot = await getDoc(productRef);
+    
+    if (!productSnapshot.exists()) {
+      throw new Error('პროდუქტი ვერ მოიძებნა');
+    }
+    
+    // პროდუქტისთვის განსახვავებული განახლება ფასდაკლების ტიპის მიხედვით
+    if (isPublic) {
+      // საჯარო ფასდაკლებისთვის
+      await updateDoc(productRef, {
+        discountPercentage: discountPercentage,
+        hasPublicDiscount: true,
+        promoActive: true,
+        updatedAt: Date.now()
+      });
+    } else {
+      // პრომოკოდისთვის
+      await updateDoc(productRef, {
+        promoCode: promoCode,
+        discountPercentage: discountPercentage,
+        promoActive: true,
+        updatedAt: Date.now()
+      });
+    }
+    
+    // ფასდაკლების შენახვა ფასდაკლებების კოლექციაში
+    const discountRef = doc(db, 'discounts', discountId);
+    await setDoc(discountRef, {
+      id: discountId,
+      productId: productId,
+      discountPercentage: discountPercentage,
+      active: true,
+      isPublic: isPublic,
+      promoCode: isPublic ? null : promoCode,
+      createdAt: Date.now(),
+      updatedAt: Date.now()
+    });
+    
+    return true;
+  } catch (error) {
+    console.error('შეცდომა ფასდაკლების დამატებისას:', error);
+    throw error;
+  }
+};
+
+// პრომოკოდის დამატება პროდუქტზე (დაეფუძნება ახალ ფუნქციას)
+export const addPromoCodeToProduct = async (productId: string, promoCode: string, discountPercentage: number) => {
+  return addDiscountToProduct(productId, discountPercentage, false, promoCode);
+};
+
+// საჯარო ფასდაკლების დამატება
+export const addPublicDiscountToProduct = async (productId: string, discountPercentage: number) => {
+  return addDiscountToProduct(productId, discountPercentage, true);
+};
+
+// ფასდაკლების დეაქტივაცია (უნივერსალური)
+export const deactivateDiscount = async (discountId: string) => {
+  try {
+    // ნახოს ფასდაკლება
+    const discountRef = doc(db, 'discounts', discountId);
+    const discountSnap = await getDoc(discountRef);
+    
+    if (!discountSnap.exists()) {
+      throw new Error('ფასდაკლება ვერ მოიძებნა');
+    }
+    
+    const discountData = discountSnap.data() as any;
+    const productId = discountData.productId;
+    
+    // პირველად განაახლოს ფასდაკლების დოკუმენტი
+    await updateDoc(discountRef, {
+      active: false,
+      updatedAt: Date.now()
+    });
+    
+    // შემდეგ განაახლოს პროდუქტის მდგომარეობა
+    const productRef = doc(db, 'products', productId);
+    
+    if (discountData.isPublic) {
+      // თუ საჯარო ფასდაკლებაა
+      await updateDoc(productRef, {
+        hasPublicDiscount: false,
+        promoActive: false,
+        updatedAt: Date.now()
+      });
+    } else {
+      // თუ პრომოკოდია
+      await updateDoc(productRef, {
+        promoActive: false,
+        updatedAt: Date.now()
+      });
+    }
+    
+    return true;
+  } catch (error) {
+    console.error('შეცდომა ფასდაკლების დეაქტივაციისას:', error);
+    throw error;
+  }
+};
+
+// პრომოკოდის დეაქტივაცია (ძველი მეთოდის ხიდი)
+export const deactivatePromoCode = async (promoCode: string) => {
+  return deactivateDiscount(promoCode);
+};
+
+// ფასდაკლებების მიღება
+export const getDiscounts = async () => {
+  try {
+    const discountsRef = collection(db, 'discounts');
+    const discountsSnapshot = await getDocs(discountsRef);
+    const discounts: any[] = [];
+    
+    discountsSnapshot.forEach((doc) => {
+      discounts.push({
+        ...doc.data(),
+        id: doc.id
+      });
+    });
+    
+    return discounts;
+  } catch (error) {
+    console.error('შეცდომა ფასდაკლებების მიღებისას:', error);
+    throw error;
+  }
+};
+
+// პრომოკოდების მიღება (მხოლოდ აქტიური პრომოკოდები, არა საჯარო ფასდაკლებები)
+export const getPromoCodes = async () => {
+  try {
+    const promosRef = collection(db, 'discounts');
+    const q = query(
+      promosRef, 
+      where('isPublic', '==', false),  // მხოლოდ პრივატული პრომოკოდები
+      where('active', '==', true)      // მხოლოდ აქტიური პრომოკოდები
+    );
+    
+    const querySnapshot = await getDocs(q);
+    const promoCodes: any[] = [];
+    
+    for (const docItem of querySnapshot.docs) {
+      const promoData = docItem.data();
+      
+      // პროდუქტის ინფორმაციის მიღება
+      const productRef = doc(db, 'products', promoData.productId);
+      const productSnapshot = await getDoc(productRef);
+      
+      if (productSnapshot.exists()) {
+        const productData = productSnapshot.data();
+        promoCodes.push({
+          ...promoData,
+          id: docItem.id,
+          productName: productData.name,
+          productImage: productData.images?.[0] || '',
+          productPrice: productData.price
+        });
+      }
+    }
+    
+    return promoCodes;
+  } catch (error) {
+    console.error('შეცდომა პრომოკოდების მიღებისას:', error);
+    throw error;
+  }
+};
+
+// საჯარო ფასდაკლებების მიღება (მხოლოდ აქტიური საჯარო ფასდაკლებები)
+export const getPublicDiscounts = async () => {
+  try {
+    const discountsRef = collection(db, 'discounts');
+    const q = query(
+      discountsRef, 
+      where('isPublic', '==', true),  // მხოლოდ საჯარო ფასდაკლებები
+      where('active', '==', true)     // მხოლოდ აქტიური ფასდაკლებები
+    );
+    
+    const querySnapshot = await getDocs(q);
+    const publicDiscounts: any[] = [];
+    
+    for (const docItem of querySnapshot.docs) {
+      const discountData = docItem.data();
+      
+      // პროდუქტის ინფორმაციის მიღება
+      const productRef = doc(db, 'products', discountData.productId);
+      const productSnapshot = await getDoc(productRef);
+      
+      if (productSnapshot.exists()) {
+        const productData = productSnapshot.data();
+        publicDiscounts.push({
+          ...discountData,
+          id: docItem.id,
+          productName: productData.name,
+          productImage: productData.images?.[0] || '',
+          productPrice: productData.price
+        });
+      }
+    }
+    
+    return publicDiscounts;
+  } catch (error) {
+    console.error('შეცდომა საჯარო ფასდაკლებების მიღებისას:', error);
     throw error;
   }
 }; 

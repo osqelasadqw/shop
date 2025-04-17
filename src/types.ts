@@ -8,6 +8,10 @@ export interface Product {
   categoryId?: string;
   createdAt?: number;
   updatedAt?: number;
+  isSpecial?: boolean;
+  promoActive?: boolean;
+  discountPercentage?: number;
+  hasPublicDiscount?: boolean;
 }
 
 // Category type

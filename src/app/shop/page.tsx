@@ -1,11 +1,11 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState, Suspense, useMemo } from 'react';
 import { ShopLayout } from '@/components/layouts/shop-layout';
 import { ProductCard } from '@/components/shop/product-card';
-import { getProducts } from '@/lib/firebase-service';
-import { Product } from '@/types';
-import { Filter, X } from 'lucide-react';
+import { getProducts, getProductsByCategory, getCategories } from '@/lib/firebase-service';
+import { Product, Category } from '@/types';
+import { ShoppingCart, SlidersHorizontal, ArrowLeft, ArrowRight, ChevronLeft, X } from 'lucide-react';
 import { Slider } from '@/components/ui/slider';
 import { Button } from '@/components/ui/button';
 import { 
@@ -23,7 +23,27 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { useSearchParams } from 'next/navigation';
+import { useSearchParams, useRouter } from 'next/navigation';
+import Link from 'next/link';
+import {
+  Sheet,
+  SheetClose,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "@/components/ui/sheet";
+import Image from 'next/image';
+import { useCart } from '@/components/providers/cart-provider';
+import { Swiper, SwiperSlide } from 'swiper/react';
+import { Autoplay, Pagination } from 'swiper/modules';
+import 'swiper/css';
+import 'swiper/css/pagination';
+import 'swiper/css/autoplay';
+import { Label } from "@/components/ui/label";
+// import { Pagination as UIPagination } from '@/components/ui/pagination';
+// import { Checkbox } from "@/components/ui/checkbox";
 
 type SortOption = 'newest' | 'oldest' | 'price-asc' | 'price-desc';
 
@@ -32,56 +52,66 @@ interface ShopPageProps {
   initialMinMaxPrice: [number, number];
 }
 
-// Fetch data at build time (or periodically with ISR)
-// Note: In App Router, data fetching is done differently (Server Components)
-// This example uses the older Pages Router style for illustration.
-// A real App Router implementation would fetch data directly in the Server Component.
-/*
-export async function getStaticProps() {
-  const productsData = await getProducts();
-  let minMaxPrice: [number, number] = [0, 1000];
-  if (productsData.length > 0) {
-    const prices = productsData.map(p => p.price || 0);
-    minMaxPrice = [Math.floor(Math.min(...prices)), Math.ceil(Math.max(...prices))];
-  }
-  return {
-    props: {
-      initialProducts: productsData,
-      initialMinMaxPrice: minMaxPrice,
-    },
-    revalidate: 60, // Regenerate page every 60 seconds (ISR)
-  };
-}
-*/
-
-// For App Router, we fetch data directly in the component (Server Component)
-// and pass it down or handle client-side state management.
-// Let's simulate passing initial data via props and keep client-side filtering.
-
-export default function ShopPage() { // We'll fetch data inside and keep client logic
+function SearchParamsSection({ 
+  setSearchTerm,
+  setCategoryId
+}: { 
+  setSearchTerm: (value: string) => void,
+  setCategoryId: (value: string | null) => void
+}) {
   const searchParams = useSearchParams();
-  const [products, setProducts] = useState<Product[]>([]);
-  const [initialMinMaxPrice, setInitialMinMaxPrice] = useState<[number, number]>([0, 1000]);
-  const [isLoading, setIsLoading] = useState(true); // Keep loading state for client-side fetch
-  const [searchTerm, setSearchTerm] = useState(searchParams.get('search') || '');
-  const [showFilters, setShowFilters] = useState(true);
+  const searchTerm = searchParams.get('search') || '';
+  const categoryId = searchParams.get('category') || null;
   
-  // Filter states
-  const [priceRange, setPriceRange] = useState<[number, number]>([0, 1000]);
+  useEffect(() => {
+    setSearchTerm(searchTerm);
+  }, [searchTerm, setSearchTerm]);
+  
+  useEffect(() => {
+    setCategoryId(categoryId);
+  }, [categoryId, setCategoryId]);
+  
+  return null;
+}
+
+export default function ShopPage() {
+  const [products, setProducts] = useState<Product[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [initialMinMaxPrice, setInitialMinMaxPrice] = useState<[number, number]>([0, 1000]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [showFilters, setShowFilters] = useState(true);
+  const [categoryId, setCategoryId] = useState<string | null>(null);
+  const [activeCategoryName, setActiveCategoryName] = useState<string | null>(null);
+  const router = useRouter();
+  
+  const [priceRange, setPriceRange] = useState<[number, number]>([0, 0]);
   const [minMaxPrice, setMinMaxPrice] = useState<[number, number]>([0, 1000]);
   const [sortOption, setSortOption] = useState<SortOption>('newest');
-  
-  // Update search term when URL param changes
-  useEffect(() => {
-    setSearchTerm(searchParams.get('search') || '');
-  }, [searchParams]);
-  
-  // Fetch initial products on client side (App Router alternative to getStaticProps)
+  const [userModifiedRange, setUserModifiedRange] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage] = useState(12);
+
+  const { addToCart } = useCart();
+
   useEffect(() => {
     const fetchInitialData = async () => {
       setIsLoading(true);
       try {
-        const productsData = await getProducts();
+        let productsData: Product[] = [];
+        const categoriesData = await getCategories();
+        setCategories(categoriesData);
+        
+        if (categoryId) {
+          productsData = await getProductsByCategory(categoryId);
+          const category = categoriesData.find(cat => cat.id === categoryId);
+          if (category) {
+            setActiveCategoryName(category.name);
+          }
+        } else {
+          productsData = await getProducts();
+        }
+        
         setProducts(productsData);
         
         let calculatedMinMax: [number, number] = [0, 1000];
@@ -91,7 +121,6 @@ export default function ShopPage() { // We'll fetch data inside and keep client 
         }
         setInitialMinMaxPrice(calculatedMinMax);
         setMinMaxPrice(calculatedMinMax);
-        setPriceRange(calculatedMinMax); 
       } catch (error) {
         console.error('Error fetching initial products:', error);
       } finally {
@@ -99,15 +128,18 @@ export default function ShopPage() { // We'll fetch data inside and keep client 
       }
     };
     fetchInitialData();
-  }, []); // Fetch only once on mount
+  }, [categoryId]);
 
-  // Filter products based on search term and filters (Client-side)
-  const filteredProducts = products
-    .filter(product => 
-      (product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+  const allFilteredProducts = products
+    .filter(product => {
+      const priceCondition = userModifiedRange 
+        ? (product.price >= priceRange[0] && product.price <= priceRange[1])
+        : true;
+        
+      return (product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
        product.description.toLowerCase().includes(searchTerm.toLowerCase())) &&
-      (product.price >= priceRange[0] && product.price <= priceRange[1])
-    )
+       priceCondition;
+    })
     .sort((a, b) => {
       switch (sortOption) {
         case 'newest':
@@ -122,46 +154,167 @@ export default function ShopPage() { // We'll fetch data inside and keep client 
           return 0;
       }
     });
+    
+  const specialProducts = allFilteredProducts.filter(product => Boolean((product as any).isSpecial));
+  
+  const filteredProducts = allFilteredProducts.filter(product => !Boolean((product as any).isSpecial));
+  
+  const allProductsForSmallScreens = [...allFilteredProducts];
 
   const handlePriceChange = (value: number[]) => {
     setPriceRange([value[0], value[1]]);
+    setUserModifiedRange(true);
   };
 
   const handleReset = () => {
-    // Reset price range to initially fetched min/max
-    setPriceRange(initialMinMaxPrice);
+    setPriceRange([0, 0]);
+    setUserModifiedRange(false);
     setMinMaxPrice(initialMinMaxPrice);
     setSortOption('newest');
     setSearchTerm('');
-    // We don't need to reset the search term URL parameter here, 
-    // it should be handled by the search component in the layout
   };
+
+  const handleMinPriceChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newMinPrice = Number(e.target.value);
+    if (isNaN(newMinPrice) || newMinPrice < minMaxPrice[0]) return;
+    
+    if (newMinPrice <= priceRange[1]) {
+      setPriceRange([newMinPrice, priceRange[1]]);
+      setUserModifiedRange(true);
+    }
+  };
+
+  const handleMaxPriceChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newMaxPrice = Number(e.target.value);
+    if (isNaN(newMaxPrice) || newMaxPrice > minMaxPrice[1]) return;
+    
+    if (newMaxPrice >= priceRange[0]) {
+      setPriceRange([priceRange[0], newMaxPrice]);
+      setUserModifiedRange(true);
+    }
+  };
+
+  const indexOfLastItem = currentPage * itemsPerPage;
 
   return (
     <ShopLayout>
+      <Suspense fallback={<div>Loading search parameters...</div>}>
+        <SearchParamsSection setSearchTerm={setSearchTerm} setCategoryId={setCategoryId} />
+      </Suspense>
+      
       <div className="mb-8">
-        <h1 className="text-3xl font-bold tracking-tight mb-2">ყველა პროდუქტი</h1>
+        <h1 className="text-3xl font-bold tracking-tight mb-2">
+          {activeCategoryName ? activeCategoryName : "ყველა პროდუქტი"}
+        </h1>
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <p className="text-muted-foreground">
-            დაათვალიერეთ ჩვენი მაღალი ხარისხის პროდუქტები
+            {categoryId && (
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                className="px-0 hover:bg-transparent hover:text-primary -ml-2"
+                onClick={() => {
+                  router.push('/shop');
+                }}
+              >
+                <ChevronLeft className="h-4 w-4 mr-1" />
+                მთავარზე დაბრუნება
+              </Button>
+            )}
           </p>
           <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="icon"
-              className="md:hidden"
-              onClick={() => setShowFilters(!showFilters)}
-            >
-              <Filter className="h-4 w-4" />
-            </Button>
+            <Sheet>
+              <SheetTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="md:hidden flex items-center gap-1 text-xs"
+                >
+                  <SlidersHorizontal className="h-3.5 w-3.5" />
+                  <span>ფილტრი</span>
+                </Button>
+              </SheetTrigger>
+              <SheetContent side="left" className="w-[85vw] max-w-sm">
+                <SheetHeader>
+                  <SheetTitle>ფილტრი</SheetTitle>
+                  <SheetDescription>
+                    დააფილტრეთ და დაალაგეთ პროდუქტები
+                  </SheetDescription>
+                </SheetHeader>
+                <div className="space-y-6 py-4">
+                  <div className="space-y-4">
+                    <h2 className="font-medium text-sm">ფასი</h2>
+                    <div className="pt-2 px-2">
+                      <Slider
+                        defaultValue={[0, minMaxPrice[1]]}
+                        min={minMaxPrice[0]}
+                        max={minMaxPrice[1]}
+                        step={1}
+                        value={userModifiedRange ? [priceRange[0], priceRange[1]] : [0, 0]}
+                        onValueChange={handlePriceChange}
+                        className="mb-3"
+                      />
+                      <div className="flex items-center justify-between">
+                        <div className="flex flex-col items-center">
+                          <Label htmlFor="min-price-mobile" className="sr-only">მინიმალური ფასი</Label>
+                          <input
+                            id="min-price-mobile"
+                            type="number"
+                            className="border rounded-md px-1 py-0.5 w-12 text-center text-[10px] xs:text-xs sm:text-sm sm:w-16 sm:px-2 sm:py-1"
+                            min={minMaxPrice[0]}
+                            max={priceRange[1]}
+                            value={priceRange[0]}
+                            onChange={handleMinPriceChange}
+                          />
+                        </div>
+                        <div className="flex flex-col items-center">
+                          <Label htmlFor="max-price-mobile" className="sr-only">მაქსიმალური ფასი</Label>
+                          <input
+                            id="max-price-mobile"
+                            type="number"
+                            className="border rounded-md px-1 py-0.5 w-12 text-center text-[10px] xs:text-xs sm:text-sm sm:w-16 sm:px-2 sm:py-1"
+                            min={priceRange[0]}
+                            max={minMaxPrice[1]}
+                            value={userModifiedRange ? priceRange[1] : 0}
+                            onChange={handleMaxPriceChange}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div className="space-y-4">
+                    <h2 className="font-medium text-sm">დახარისხება</h2>
+                    <Select
+                      value={sortOption}
+                      onValueChange={(value) => setSortOption(value as SortOption)}
+                    >
+                      <SelectTrigger aria-label="დახარისხების პარამეტრები">
+                        <SelectValue placeholder="აირჩიეთ ვარიანტი" />
+                      </SelectTrigger>
+                      <SelectContent className="after:content-[''] after:block after:h-3">
+                        <SelectItem value="newest">უახლესი</SelectItem>
+                        <SelectItem value="oldest">უძველესი</SelectItem>
+                        <SelectItem value="price-asc">ფასი: დაბლიდან მაღლა</SelectItem>
+                        <SelectItem value="price-desc">ფასი: მაღლიდან დაბლა</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                <div className="pt-4">
+                  <Button onClick={handleReset} variant="outline" className="w-full">
+                    ფილტრის გასუფთავება
+                  </Button>
+                </div>
+              </SheetContent>
+            </Sheet>
           </div>
         </div>
       </div>
 
       <div className="flex flex-col md:flex-row gap-6">
-        {/* Filter Panel */}
         {showFilters && (
-          <div className="md:w-64 lg:w-72">
+          <div className="hidden md:block md:w-64 lg:w-72">
             <Card className="sticky top-24">
               <CardHeader>
                 <div className="flex items-center justify-between">
@@ -171,6 +324,7 @@ export default function ShopPage() { // We'll fetch data inside and keep client 
                     size="sm" 
                     onClick={handleReset}
                     className="h-8 w-8 p-0"
+                    aria-label="ფილტრის გასუფთავება"
                   >
                     <X className="h-4 w-4" />
                   </Button>
@@ -180,42 +334,57 @@ export default function ShopPage() { // We'll fetch data inside and keep client 
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
-                {/* Price Range Slider */}
                 <div className="space-y-4">
-                  <h4 className="font-medium text-sm">ფასი</h4>
-                  <div className="pt-4">
+                  <h2 className="font-medium text-sm">ფასი</h2>
+                  <div className="pt-4 px-2">
                     <Slider
-                      // Use initialMinMaxPrice for default, min, max
-                      defaultValue={initialMinMaxPrice}
-                      min={initialMinMaxPrice[0]}
-                      max={initialMinMaxPrice[1]}
+                      defaultValue={[0, minMaxPrice[1]]}
+                      min={minMaxPrice[0]}
+                      max={minMaxPrice[1]}
                       step={1}
-                      value={[priceRange[0], priceRange[1]]}
+                      value={userModifiedRange ? [priceRange[0], priceRange[1]] : [0, 0]}
                       onValueChange={handlePriceChange}
-                      className="mb-6"
+                      className="mb-3"
                     />
                     <div className="flex items-center justify-between">
-                      <div className="border rounded-md px-2 py-1 w-20 text-center">
-                        {priceRange[0]} ₾
+                      <div className="flex flex-col items-center">
+                        <Label htmlFor="min-price-desktop" className="sr-only">მინიმალური ფასი</Label>
+                        <input
+                          id="min-price-desktop"
+                          type="number"
+                          className="border rounded-md px-1 py-0.5 w-12 text-center text-[10px] xs:text-xs sm:text-sm sm:w-16 sm:px-2 sm:py-1"
+                          min={minMaxPrice[0]}
+                          max={priceRange[1]}
+                          value={priceRange[0]}
+                          onChange={handleMinPriceChange}
+                        />
                       </div>
-                      <div className="border rounded-md px-2 py-1 w-20 text-center">
-                        {priceRange[1]} ₾
+                      <div className="flex flex-col items-center">
+                        <Label htmlFor="max-price-desktop" className="sr-only">მაქსიმალური ფასი</Label>
+                        <input
+                          id="max-price-desktop"
+                          type="number"
+                          className="border rounded-md px-1 py-0.5 w-12 text-center text-[10px] xs:text-xs sm:text-sm sm:w-16 sm:px-2 sm:py-1"
+                          min={priceRange[0]}
+                          max={minMaxPrice[1]}
+                          value={userModifiedRange ? priceRange[1] : 0}
+                          onChange={handleMaxPriceChange}
+                        />
                       </div>
                     </div>
                   </div>
                 </div>
                 
-                {/* Sort Options */}
                 <div className="space-y-4">
-                  <h4 className="font-medium text-sm">დახარისხება</h4>
+                  <h2 className="font-medium text-sm">დახარისხება</h2>
                   <Select
                     value={sortOption}
                     onValueChange={(value) => setSortOption(value as SortOption)}
                   >
-                    <SelectTrigger>
+                    <SelectTrigger aria-label="დახარისხების პარამეტრები">
                       <SelectValue placeholder="აირჩიეთ ვარიანტი" />
                     </SelectTrigger>
-                    <SelectContent>
+                    <SelectContent className="after:content-[''] after:block after:h-3">
                       <SelectItem value="newest">უახლესი</SelectItem>
                       <SelectItem value="oldest">უძველესი</SelectItem>
                       <SelectItem value="price-asc">ფასი: დაბლიდან მაღლა</SelectItem>
@@ -233,12 +402,10 @@ export default function ShopPage() { // We'll fetch data inside and keep client 
           </div>
         )}
 
-        {/* Product Grid */}
         <div className="flex-1">
           {isLoading ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
               {[...Array(8)].map((_, index) => (
-                // Skeleton Loader
                 <div key={index} className="space-y-3">
                   <div className="aspect-square bg-gray-200 rounded-md animate-pulse"></div>
                   <div className="h-4 bg-gray-200 rounded animate-pulse w-3/4"></div>
@@ -247,7 +414,7 @@ export default function ShopPage() { // We'll fetch data inside and keep client 
                 </div>
               ))}
             </div>
-          ) : filteredProducts.length === 0 ? (
+          ) : (filteredProducts.length === 0 && specialProducts.length === 0) ? (
             <div className="text-center py-12">
               <h2 className="text-xl font-medium mb-2">პროდუქტები ვერ მოიძებნა</h2>
               <p className="text-muted-foreground">
@@ -263,10 +430,210 @@ export default function ShopPage() { // We'll fetch data inside and keep client 
               </Button>
             </div>
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
-              {filteredProducts.map((product) => (
-                <ProductCard key={product.id} product={product} />
-              ))}
+            <div className="space-y-8">
+              <div>
+                <h2 className="text-xl font-bold mb-4">ყველა პროდუქტი</h2>
+                
+                <div className="relative group">
+                  <style jsx>{`
+                    .card-reference {
+                      position: absolute;
+                      visibility: hidden;
+                      height: 0;
+                    }
+                    .special-card {
+                      height: 100%;
+                      grid-row: span 2;
+                      aspect-ratio: 3/4;
+                      max-height: 80vh;
+                    }
+                    .product-grid {
+                      display: grid;
+                      grid-template-columns: repeat(4, 1fr);
+                      gap: 0.75rem;
+                      max-width: 100%;
+                      overflow: hidden;
+                    }
+                    .product-grid-item {
+                      display: flex;
+                      min-width: 0;
+                    }
+                    .special-grid-item {
+                      grid-column: 3 / span 2;
+                      grid-row: 1 / span 2;
+                      min-height: 300px;
+                    }
+                    .special-grid-item .swiper {
+                      height: 100%;
+                      width: 100%;
+                    }
+                    .special-grid-item .swiper-slide {
+                      height: 100%;
+                      width: 100%;
+                      display: flex;
+                      flex-direction: column;
+                    }
+                    @media (max-width: 1279px) {
+                      .product-grid {
+                        grid-template-columns: repeat(4, 1fr);
+                        gap: 0.5rem;
+                      }
+                    }
+                    @media (max-width: 1023px) {
+                      .product-grid {
+                        grid-template-columns: repeat(4, 1fr);
+                        gap: 0.5rem;
+                      }
+                    }
+                    @media (max-width: 767px) {
+                      .product-grid {
+                        grid-template-columns: repeat(4, 1fr);
+                        gap: 0.3rem;
+                      }
+                      .product-grid-item {
+                        grid-column: span 1;
+                        grid-row: span 1;
+                      }
+                    }
+                    @media (max-width: 639px) {
+                      .product-grid {
+                        grid-template-columns: repeat(4, 1fr);
+                        gap: 0.3rem;
+                      }
+                    }
+                  `}</style>
+                  
+                  <div className="product-grid">
+                    {specialProducts.length > 0 && (
+                      <div className="special-grid-item">
+                        <div className="h-full w-full min-h-[300px] border rounded-lg overflow-hidden shadow-sm hover:shadow-lg transition-all bg-white relative">
+                          <Swiper
+                            modules={[Autoplay, Pagination]}
+                            spaceBetween={0}
+                            slidesPerView={1}
+                            autoplay={{ delay: 5000, disableOnInteraction: true }}
+                            pagination={{ clickable: true }}
+                            loop={specialProducts.length >= 3}
+                            className="h-full w-full min-h-[300px]"
+                            breakpoints={{
+                              1280: {
+                                slidesPerView: 1
+                              },
+                              1000: {
+                                slidesPerView: 1
+                              }
+                            }}
+                          >
+                            {specialProducts.map((product: Product, index: number) => {
+                              const defaultImage = 'https://placehold.co/400x400/eee/999?text=No+Image';
+                              const productImage = product.images && product.images.length > 0 
+                                ? product.images[0] 
+                                : defaultImage;
+                                
+                              return (
+                                <SwiperSlide key={product.id}>
+                                  <Link 
+                                    href={`/shop/product/${product.id}`}
+                                    className="group flex flex-col h-full w-full"
+                                  >
+                                    <div className="flex-1 flex items-center justify-center relative overflow-hidden min-h-[200px] p-0 pt-0 pb-0">
+                                      <Image
+                                        src={productImage}
+                                        alt={product.name}
+                                        fill
+                                        style={{ objectFit: 'cover', objectPosition: 'center' }}
+                                        sizes="(max-width: 639px) 100vw, (max-width: 767px) 100vw, (max-width: 1023px) 100vw, (max-width: 1279px) 100vw, 50vw"
+                                        priority={index === 0}
+                                        placeholder="blur"
+                                        blurDataURL="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII="
+                                        className="transition-transform duration-300 group-hover:scale-105"
+                                      />
+                                    </div>
+                                    
+                                    <div className="p-3 mt-auto bg-white">
+                                      <h3 className="font-medium text-sm md:text-base mb-1 line-clamp-2">{product.name}</h3>
+                                      <div className="flex justify-between items-end mt-1">
+                                        <p className="text-sm font-semibold text-gray-900">
+                                          {new Intl.NumberFormat('ka-GE', {
+                                            style: 'currency',
+                                            currency: 'GEL',
+                                          }).format(product.price)}
+                                        </p>
+                                        <Button 
+                                          size="sm" 
+                                          variant="default" 
+                                          className="flex items-center gap-1 rounded-md whitespace-nowrap text-xs md:text-sm ml-1"
+                                          onClick={(e) => {
+                                            e.preventDefault();
+                                            e.stopPropagation();
+                                            addToCart(product);
+                                          }}
+                                          aria-label={`${product.name} - კალათში დამატება`}
+                                        >
+                                          <ShoppingCart className="h-3 w-3 md:h-3.5 md:w-3.5 flex-shrink-0" />
+                                          <span className="hidden xs:inline">კალათში</span>
+                                          <span className="xs:hidden">+</span>
+                                        </Button>
+                                      </div>
+                                    </div>
+                                  </Link>
+                                </SwiperSlide>
+                              );
+                            })}
+                          </Swiper>
+                          
+                          {specialProducts.length > 1 && (
+                            <>
+                              <button 
+                                className="absolute left-2 top-1/2 transform -translate-y-1/2 z-10 bg-white/80 hover:bg-white rounded-full p-1.5 focus:outline-none shadow-sm"
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  const swiperInstance = (document.querySelector('.special-grid-item .swiper') as any)?.swiper;
+                                  if (swiperInstance) {
+                                    swiperInstance.slidePrev();
+                                  }
+                                }}
+                                aria-label="წინა სლაიდი"
+                              >
+                                <ArrowLeft className="h-4 w-4 text-gray-700" />
+                              </button>
+                              <button 
+                                className="absolute right-2 top-1/2 transform -translate-y-1/2 z-10 bg-white/80 hover:bg-white rounded-full p-1.5 focus:outline-none shadow-sm"
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  const swiperInstance = (document.querySelector('.special-grid-item .swiper') as any)?.swiper;
+                                  if (swiperInstance) {
+                                    swiperInstance.slideNext();
+                                  }
+                                }}
+                                aria-label="შემდეგი სლაიდი"
+                              >
+                                <ArrowRight className="h-4 w-4 text-gray-700" />
+                              </button>
+                            </>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                    
+                    {filteredProducts.slice(0, 4).map((product) => (
+                      <div key={product.id} className="product-grid-item">
+                        <div className="w-full h-full product-card-normal scale-95 xs:scale-90 sm:scale-95">
+                          <ProductCard product={product} />
+                        </div>
+                      </div>
+                    ))}
+                    
+                    {filteredProducts.slice(4).map((product) => (
+                      <div key={product.id} className="product-grid-item">
+                        <div className="w-full h-full product-card-normal scale-95 xs:scale-90 sm:scale-95">
+                          <ProductCard product={product} />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
             </div>
           )}
         </div>

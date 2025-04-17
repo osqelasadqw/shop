@@ -2,10 +2,11 @@
 
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { usePathname, useRouter } from 'next/navigation';
 import { onAuthStateChanged } from 'firebase/auth';
 import { auth } from '@/lib/firebase-config';
-import { LayoutDashboard, Package, FolderOpen, Settings, LogOut, ArrowLeft, Users } from 'lucide-react';
+import { LayoutDashboard, Package, FolderOpen, Settings, LogOut, ArrowLeft, Users, Tag, Percent } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { signOut } from '@/lib/auth';
 import { getUserRole } from '@/lib/firebase-service';
@@ -76,6 +77,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
     { href: '/admin', label: 'მთავარი', icon: <LayoutDashboard className="h-5 w-5" /> },
     { href: '/admin/products', label: 'პროდუქტები', icon: <Package className="h-5 w-5" /> },
     { href: '/admin/categories', label: 'კატეგორიები', icon: <FolderOpen className="h-5 w-5" /> },
+    { href: '/admin/discounts', label: 'ფასდაკლებები და პრომოკოდები', icon: <Percent className="h-5 w-5" /> },
     { href: '/admin/users', label: 'მომხმარებლები', icon: <Users className="h-5 w-5" /> },
     { href: '/admin/settings', label: 'პარამეტრები', icon: <Settings className="h-5 w-5" /> },
   ];
@@ -111,10 +113,12 @@ export function AdminLayout({ children }: AdminLayoutProps) {
           <div className="flex items-center justify-between">
             <div className="flex items-center">
               {user.photoURL && (
-                <img 
+                <Image 
                   src={user.photoURL} 
                   alt="User profile" 
-                  className="w-8 h-8 rounded-full mr-2"
+                  width={32}
+                  height={32}
+                  className="rounded-full mr-2"
                 />
               )}
               <div className="text-sm font-medium truncate">

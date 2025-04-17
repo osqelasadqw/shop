@@ -6,15 +6,17 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { Category, Product } from '@/types';
 import { getCategories, getProductsByCategory } from '@/lib/firebase-service';
-import { ChevronDown } from 'lucide-react';
+import { ChevronDown, Pin } from 'lucide-react';
 
 export function CategoryDropdown() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isOpen, setIsOpen] = useState(false);
+  const [isPinned, setIsPinned] = useState(false);
   const [hoveredCategory, setHoveredCategory] = useState<string | null>(null);
   const [categoryProducts, setCategoryProducts] = useState<Record<string, Product[]>>({});
   const router = useRouter();
+  const [closeTimerId, setCloseTimerId] = useState<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     const fetchCategories = async () => {
@@ -30,6 +32,15 @@ export function CategoryDropdown() {
 
     fetchCategories();
   }, []);
+
+  useEffect(() => {
+    // Cleanup timer on component unmount
+    return () => {
+      if (closeTimerId) {
+        clearTimeout(closeTimerId);
+      }
+    };
+  }, [closeTimerId]);
 
   const handleCategoryHover = async (categoryId: string) => {
     setHoveredCategory(categoryId);
@@ -48,27 +59,89 @@ export function CategoryDropdown() {
     }
   };
 
+  const clearCloseTimer = () => {
+    if (closeTimerId) {
+      clearTimeout(closeTimerId);
+      setCloseTimerId(null);
+    }
+  };
+
+  const handleMouseEnterButton = () => {
+    clearCloseTimer();
+    setIsOpen(true);
+  };
+
+  const handleMouseLeaveButton = () => {
+    if (isPinned) return; // არ დავხუროთ თუ დაფიქსირებულია
+    
+    const timer = setTimeout(() => {
+      setIsOpen(false);
+    }, 100); // 100ms delay before closing
+    setCloseTimerId(timer);
+  };
+  
+  const handleMouseEnterContent = () => {
+    clearCloseTimer();
+  };
+  
+  const handleMouseLeaveContent = () => {
+    if (isPinned) return; // არ დავხუროთ თუ დაფიქსირებულია
+    setIsOpen(false); // Close immediately when leaving content area
+  };
+
+  const handleButtonClick = () => {
+    if (isOpen) {
+      handleMouseLeaveContent(); // Close immediately if clicked while open
+    } else {
+      handleMouseEnterButton(); // Open immediately if clicked while closed
+    }
+  };
+
+  const handlePinToggle = (e: React.MouseEvent) => {
+    e.stopPropagation(); // შევაჩეროთ ივენთის გავრცელება
+    const newPinnedState = !isPinned;
+    setIsPinned(newPinnedState);
+    if (newPinnedState) {
+      setIsOpen(true); // გავხსნათ, თუ ვაფიქსირებთ
+    } else {
+      setIsOpen(false); // დავხუროთ, თუ პინს მოვხსნით
+    }
+  };
+
   return (
     <div className="relative inline-block text-left">
       {/* დროფდაუნის ტრიგერი */}
-      <button
-        type="button"
-        className="inline-flex items-center justify-center gap-2 rounded-md px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none transition-colors"
-        aria-expanded={isOpen}
-        aria-haspopup="true"
-        onMouseEnter={() => setIsOpen(true)}
-        onClick={() => setIsOpen(!isOpen)}
-      >
-        კატეგორიები
-        <ChevronDown className={`h-4 w-4 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} aria-hidden="true" />
-      </button>
+      <div className="flex items-center">
+        <button
+          type="button"
+          className={`inline-flex items-center justify-center mr-1 rounded-full w-5 h-5 ${isPinned ? 'bg-primary text-white' : 'bg-gray-200 text-gray-600'} hover:bg-primary/90 hover:text-white transition-colors`}
+          onClick={handlePinToggle}
+          aria-label={isPinned ? "დააუფიქსირე კატეგორიები" : "გააუქმე კატეგორიების დაფიქსირება"}
+        >
+          <Pin className="h-3 w-3" />
+        </button>
+        <button
+          type="button"
+          className="inline-flex items-center justify-center gap-2 rounded-md px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none transition-colors"
+          aria-expanded={isOpen}
+          aria-haspopup="true"
+          onMouseEnter={handleMouseEnterButton}
+          onMouseLeave={handleMouseLeaveButton}
+          onClick={handleButtonClick}
+          suppressHydrationWarning
+        >
+          კატეგორიები
+          <ChevronDown className={`h-4 w-4 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} aria-hidden="true" />
+        </button>
+      </div>
 
       {/* დროფდაუნის კონტენტი */}
       {isOpen && (
         <div 
-          className="fixed z-[100] top-[70px] left-1/2 -translate-x-1/2 rounded-lg bg-white shadow-xl ring-1 ring-black ring-opacity-5 focus:outline-none transition-all animate-in fade-in-20 zoom-in-95 duration-100"
+          className="fixed z-[100] top-[70px] left-1/2 -translate-x-1/2 rounded-lg bg-white shadow-xl ring-1 ring-black ring-opacity-5 focus:outline-none transition-all animate-in fade-in-20 zoom-in-95 slide-in-from-top-1 duration-150"
           style={{ width: '1000px', height: '500px' }}
-          onMouseLeave={() => setIsOpen(false)}
+          onMouseEnter={handleMouseEnterContent}
+          onMouseLeave={handleMouseLeaveContent}
         >
           <div className="flex divide-x h-full">
             {/* კატეგორიების სია */}
@@ -90,7 +163,7 @@ export function CategoryDropdown() {
                       }`}
                       onMouseEnter={() => handleCategoryHover(category.id)}
                       onClick={() => {
-                        router.push(`/shop/category/${category.id}`);
+                        router.push(`/shop?category=${category.id}`);
                         setIsOpen(false);
                       }}
                     >
@@ -107,9 +180,9 @@ export function CategoryDropdown() {
             <div className="flex-1 p-4 h-full overflow-y-auto">
               {hoveredCategory ? (
                 <div>
-                  <h3 className="text-sm font-medium mb-3 border-b pb-2">
+                  <h2 className="text-sm font-medium mb-3 border-b pb-2">
                     {categories.find(c => c.id === hoveredCategory)?.name}
-                  </h3>
+                  </h2>
                   <div className="grid grid-cols-3 gap-4">
                     {categoryProducts[hoveredCategory]?.length > 0 ? (
                       categoryProducts[hoveredCategory].map(product => (
@@ -120,9 +193,11 @@ export function CategoryDropdown() {
                         >
                           <div className="aspect-square rounded-md overflow-hidden bg-gray-100 group-hover:shadow-md transition-all group-hover:scale-105 duration-200">
                             {product.images && product.images[0] ? (
-                              <img
+                              <Image
                                 src={product.images[0]}
                                 alt={product.name}
+                                width={80}
+                                height={80}
                                 className="h-full w-full object-cover"
                                 onError={(e) => {
                                   const target = e.target as HTMLImageElement;

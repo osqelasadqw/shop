@@ -1,0 +1,4 @@
+.next/
+node_modules/
+.next/types/**
+src/app/shop/product/[id]/page.tsx 

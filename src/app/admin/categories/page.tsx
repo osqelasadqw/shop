@@ -7,9 +7,19 @@ import { Category, Product } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Plus, Pencil, Trash2, X, Check, ArrowLeftRight, Image as ImageIcon, Grid, Save } from 'lucide-react';
-import { DndProvider, useDrag, useDrop } from 'react-dnd';
-import { HTML5Backend } from 'react-dnd-html5-backend';
+import { Plus, Pencil, Trash2, X, Check, ArrowLeftRight, Image as ImageIcon, Grid, Save, Search } from 'lucide-react';
+import Image from 'next/image';
+import {
+  DndContext,
+  closestCenter,
+  MouseSensor,
+  TouchSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent
+} from '@dnd-kit/core';
+import { CSS } from '@dnd-kit/utilities';
+import { useDraggable, useDroppable } from '@dnd-kit/core';
 
 type DragItemType = {
   id: string;
@@ -18,22 +28,14 @@ type DragItemType = {
   productId: string;
 };
 
-// Wrapper component to work around the ref type issue
-const DragRef = ({ children, innerRef }: { children: React.ReactNode; innerRef: any }) => {
-  return <div ref={innerRef}>{children}</div>;
-};
-
+// Draggable component
 const DraggableImage = ({ image, productId }: { image: string; productId: string }) => {
-  const [{ isDragging }, drag] = useDrag(() => ({
-    type: 'image',
-    item: { id: crypto.randomUUID(), type: 'image', image, productId },
-    collect: (monitor) => ({
-      isDragging: !!monitor.isDragging()
-    }),
-    end: (item, monitor) => {
-      // Fade out animation finished
-    }
-  }));
+  const id = React.useId();
+  const dragItemData = { id, type: 'image', image, productId };
+  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
+    id,
+    data: dragItemData
+  });
 
   const [imageError, setImageError] = useState(false);
 
@@ -41,92 +43,125 @@ const DraggableImage = ({ image, productId }: { image: string; productId: string
     return null; // არ გამოაჩინო დივი, თუ სურათი ვერ ჩაიტვირთა
   }
 
+  const style = transform ? {
+    transform: CSS.Translate.toString(transform),
+  } : undefined;
+
+  // ფოტოს ზომა დამოკიდებულია პროდუქტის ID-ზე - თუ კატეგორიიდან არის უფრო პატარა იქნება
+  const isFromCategory = productId === "category-move";
+  const maxSize = isFromCategory ? '80px' : '120px';
+
   return (
-    <DragRef innerRef={drag}>
-      <div
-        className={`relative aspect-square rounded overflow-hidden shadow-sm hover:shadow-md transition-all ${
-          isDragging ? 'opacity-30 scale-95' : 'opacity-100 scale-100'
-        }`}
-        style={{
-          cursor: 'grab',
-          maxWidth: '120px',
-          maxHeight: '120px',
-          transform: isDragging ? 'scale(0.95)' : 'scale(1)',
-          transition: 'all 0.2s ease'
-        }}
-      >
-        <img
-          src={image}
-          alt="პროდუქტის ფოტო"
-          className="h-full w-full object-contain"
-          onError={() => setImageError(true)}
-        />
-      </div>
-    </DragRef>
+    <div
+      ref={setNodeRef}
+      {...listeners}
+      {...attributes}
+      className={`relative aspect-square rounded overflow-hidden shadow-sm hover:shadow-md transition-all ${
+        isDragging ? 'opacity-30 scale-95' : 'opacity-100 scale-100'
+      }`}
+      style={{
+        ...style,
+        cursor: 'grab',
+        maxWidth: maxSize,
+        maxHeight: maxSize,
+        transform: isDragging ? 'scale(0.95)' : 'scale(1)',
+        transition: 'all 0.2s ease'
+      }}
+    >
+      <Image
+        src={image}
+        alt="პროდუქტის ფოტო"
+        width={isFromCategory ? 80 : 120}
+        height={isFromCategory ? 80 : 120}
+        className="h-full w-full object-contain"
+        onError={() => setImageError(true)}
+      />
+    </div>
   );
 };
 
-const CategoryDropZone = ({ category, onImageDrop, pendingImages }: { 
+// Droppable component
+const CategoryDropZone = ({ category, pendingImages }: { 
   category: Category, 
-  onImageDrop: (imageData: DragItemType, categoryId: string) => void,
   pendingImages: {id: string, image: string}[]
 }) => {
-  const [{ isOver, canDrop }, drop] = useDrop(() => ({
-    accept: 'image',
-    drop: (item: DragItemType) => {
-      onImageDrop(item, category.id);
-      return { success: true };
-    },
-    collect: (monitor) => ({
-      isOver: !!monitor.isOver(),
-      canDrop: !!monitor.canDrop()
-    })
-  }));
+  const { setNodeRef, isOver } = useDroppable({
+    id: category.id,
+  });
 
   return (
-    <DragRef innerRef={drop}>
-      <div
-        className={`p-4 border-2 rounded-md min-h-[120px] transition-all duration-200 ${
-          isOver && canDrop 
-            ? 'border-primary bg-primary/10 shadow-md scale-102' 
-            : 'border-dashed border-gray-300'
-        }`}
-        style={{
-          transform: isOver && canDrop ? 'scale(1.02)' : 'scale(1)'
-        }}
-      >
-        <h3 className="font-medium mb-2">{category.name}</h3>
-        {pendingImages.length === 0 ? (
-          <div className="text-sm text-muted-foreground">
-            გადმოიტანეთ ფოტოები აქ კატეგორიაში დასამატებლად
+    <div
+      ref={setNodeRef}
+      className={`p-3 border-2 rounded-md min-h-[100px] transition-all duration-200 ${
+        isOver 
+          ? 'border-primary bg-primary/10 shadow-md scale-102' 
+          : 'border-dashed border-gray-300'
+      }`}
+      style={{
+        transform: isOver ? 'scale(1.02)' : 'scale(1)'
+      }}
+    >
+      <h3 className="font-medium mb-1 text-sm">{category.name}</h3>
+      {pendingImages.length === 0 ? (
+        <div className="text-xs text-muted-foreground">
+          გადმოიტანეთ ფოტოები აქ კატეგორიაში დასამატებლად
+        </div>
+      ) : (
+        <div className="mt-1">
+          <div className="grid grid-cols-4 2xl:grid-cols-5 gap-1">
+            {pendingImages.map((img) => (
+              <div 
+                key={img.id} 
+                className="relative"
+              >
+                <DraggableImage 
+                  image={img.image}
+                  productId="category-move" // ეს გამოვიყენოთ სიგნალად, რომ კატეგორიიდან გადმოტანილი სურათია
+                />
+              </div>
+            ))}
           </div>
-        ) : (
-          <div className="mt-2">
-            <div className="grid grid-cols-3 gap-2">
-              {pendingImages.map((img) => (
-                <div 
-                  key={img.id} 
-                  className="aspect-square rounded overflow-hidden shadow-sm"
-                  style={{ maxWidth: '60px', maxHeight: '60px' }}
-                >
-                  <img 
-                    src={img.image} 
-                    alt="კატეგორიის ფოტო" 
-                    className="h-full w-full object-contain"
-                  />
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-        
-        {isOver && canDrop && (
-          <div className="mt-2 text-xs text-primary animate-pulse">
-            აქ გადმოაგდეთ
-          </div>
-        )}
+        </div>
+      )}
+      
+      {isOver && (
+        <div className="mt-1 text-xs text-primary animate-pulse">
+          აქ გადმოაგდეთ
+        </div>
+      )}
+    </div>
+  );
+};
+
+// ვქმნით ახალ კომპონენტს კატეგორიის გარეშე ფოტოებისთვის
+const UncategorizedDropZone = (/*{ pendingImages }: { pendingImages: {id: string, image: string, productId: string}[] }*/) => { // commented out pendingImages
+  const { setNodeRef, isOver } = useDroppable({
+    id: "uncategorized"
+  });
+
+  return (
+    <div
+      ref={setNodeRef}
+      className={`p-3 border-2 rounded-md min-h-[100px] transition-all duration-200 ${
+        isOver 
+          ? 'border-primary bg-primary/10 shadow-md scale-102' 
+          : 'border-dashed border-gray-300'
+      }`}
+      style={{
+        transform: isOver ? 'scale(1.02)' : 'scale(1)'
+      }}
+    >
+      <h3 className="font-medium mb-1 text-sm">კატეგორიის გარეშე</h3>
+      <div className="text-xs text-muted-foreground mb-2">
+        გადმოიტანეთ ფოტოები აქ კატეგორიიდან გამოსატანად
       </div>
-    </DragRef>
+      
+      {isOver && (
+        <div className="mt-1 text-xs text-primary animate-pulse">
+          აქ გადმოაგდეთ კატეგორიიდან გამოსატანად
+        </div>
+      )}
+    </div>
   );
 };
 
@@ -142,12 +177,88 @@ export default function AdminCategories() {
   const [isDistributionModalOpen, setIsDistributionModalOpen] = useState(false);
   const [allImages, setAllImages] = useState<{id: string, image: string, productId: string}[]>([]);
   const [updateMessage, setUpdateMessage] = useState<{type: 'success' | 'error', text: string} | null>(null);
-  const [pendingChanges, setPendingChanges] = useState<{imageId: string, productId: string, categoryId: string}[]>([]);
+  const [pendingChanges, setPendingChanges] = useState<{imageId: string, productId: string, categoryId: string | undefined}[]>([]);
   const [isSaving, setIsSaving] = useState(false);
   const [categoryImages, setCategoryImages] = useState<Record<string, {id: string, image: string}[]>>({});
+  // ახალი სტეიტები საძიებოსთვის
+  const [imageSearchTerm, setImageSearchTerm] = useState('');
+  const [categorySearchTerm, setCategorySearchTerm] = useState('');
+  const [showDiscountedOnly, setShowDiscountedOnly] = useState(false);
+
+  // Sensors
+  const sensors = useSensors(
+    useSensor(MouseSensor, {
+      // Require the mouse to move by 10 pixels before activating
+      activationConstraint: {
+        distance: 10,
+      },
+    }),
+    useSensor(TouchSensor, {
+      // Press delay of 250ms, with tolerance of 5px of movement
+      activationConstraint: {
+        delay: 250,
+        tolerance: 5,
+      },
+    })
+  );
+
+  // Handle drag end
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    
+    if (over && active.data.current) {
+      const imageData = active.data.current as DragItemType;
+      const targetId = over.id as string;
+      
+      // თუ სურათს ვაგდებთ "uncategorized" ზონაში, განსხვავებული ლოგიკა გამოვიყენოთ
+      if (targetId === "uncategorized") {
+        if (imageData.productId === "category-move") {
+          // console.log("ფოტო გადაგვაქვს კატეგორიიდან კატეგორიის გარეშე განყოფილებაში");
+          handleRemoveFromCategory(imageData);
+        } else {
+          // თუ ფოტო უკვე კატეგორიის გარეშეა, არაფერი გავაკეთოთ
+          // console.log("ფოტო უკვე კატეგორიის გარეშეა");
+        }
+        return;
+      }
+      
+      // ვამატებთ ვალიდაციას, რომ არ დავუშვათ დუბლიკატების შექმნა
+      // თუ სურათი მოდის კატეგორიიდან, ვიპოვოთ წყარო კატეგორია
+      if (imageData.productId === "category-move") {
+        // ვიპოვოთ წყარო კატეგორია
+        let sourceCategory = '';
+        Object.entries(categoryImages).forEach(([catId, images]) => {
+          if (images.some(img => img.id === imageData.id || img.image === imageData.image)) {
+            sourceCategory = catId;
+          }
+        });
+        
+        // თუ წყარო და სამიზნე კატეგორიები ერთი და იგივეა, გამოვიდეთ ფუნქციიდან
+        if (sourceCategory === targetId) {
+          // console.log("ფოტო იგივე კატეგორიაში გადავიტანეთ, ცვლილება არ კეთდება");
+          return;
+        }
+      }
+      
+      // console.log(`ვტარებთ ფოტოს კატეგორიაში: ${targetId}`);
+      handleImageDrop(imageData, targetId);
+    }
+  };
 
   useEffect(() => {
-    fetchCategories();
+    const fetchInitialData = async () => {
+      setIsLoading(true);
+      try {
+        await fetchCategories(); // ჯერ კატეგორიები
+        await fetchProducts(); // შემდეგ პროდუქტები
+      } catch (_error) {
+        // console.error('Error fetching initial data:', error);
+        setUpdateMessage({ type: 'error', text: 'მონაცემების ჩატვირთვისას მოხდა შეცდომა.' });
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchInitialData();
   }, []);
 
   useEffect(() => {
@@ -176,8 +287,50 @@ export default function AdminCategories() {
       const productsData = await getProducts();
       setProducts(productsData);
       
-      // Extract all images from all products
-      const images = productsData.flatMap(product => 
+      // ინიციალიზაცია categoryImages-ის
+      const newCategoryImages: Record<string, {id: string, image: string}[]> = {};
+      
+      // პირველ ეტაპზე, გამოვყოთ პროდუქტები კატეგორიების მიხედვით
+      const productsByCategory: Record<string, Product[]> = {};
+      
+      // გავფილტროთ პროდუქტები კატეგორიების მიხედვით
+      productsData.forEach(product => {
+        if (product.categoryId) {
+          if (!productsByCategory[product.categoryId]) {
+            productsByCategory[product.categoryId] = [];
+          }
+          productsByCategory[product.categoryId].push(product);
+        }
+      });
+      
+      // შევქმნათ დროებითი ლისტი იმ პროდუქტებისთვის, რომლებსაც არ აქვთ კატეგორია
+      const productsWithoutCategory = productsData.filter(product => !product.categoryId);
+      
+      // Extract images for products with categories
+      Object.entries(productsByCategory).forEach(([categoryId, products]) => {
+        const categoryImages = products.flatMap(product => 
+          (product.images || [])
+            .filter(image => !!image && typeof image === 'string' && image.trim() !== '')
+            .map(image => ({ 
+              id: crypto.randomUUID(), 
+              image, 
+              productId: product.id 
+            }))
+        );
+        
+        if (categoryImages.length > 0) {
+          newCategoryImages[categoryId] = categoryImages.map(img => ({
+            id: img.id,
+            image: img.image
+          }));
+        }
+      });
+      
+      // დავაყენოთ categoryImages
+      setCategoryImages(newCategoryImages);
+      
+      // მხოლოდ კატეგორიის გარეშე პროდუქტების სურათები აჩვენე
+      const uncategorizedImages = productsWithoutCategory.flatMap(product => 
         (product.images || [])
           .filter(image => !!image && typeof image === 'string' && image.trim() !== '')
           .map(image => ({ 
@@ -187,9 +340,9 @@ export default function AdminCategories() {
           }))
       );
       
-      setAllImages(images);
+      setAllImages(uncategorizedImages);
     } catch (error) {
-      console.error('Error fetching products:', error);
+      console.error('Error fetching products:', error); // Renamed variable to error
     }
   };
 
@@ -249,44 +402,246 @@ export default function AdminCategories() {
 
   const handleImageDrop = (imageData: DragItemType, categoryId: string) => {
     try {
-      // Store pending change
-      setPendingChanges([
-        ...pendingChanges, 
-        { 
-          imageId: imageData.id, 
-          productId: imageData.productId, 
-          categoryId 
+      
+      // სურათის ID, რომელიც მიგვაქვს
+      const targetImageId = imageData.id;
+      const targetImageUrl = imageData.image;
+      
+      // პირველ რიგში შევამოწმოთ, ხომ არ არის სურათი უკვე ამ კატეგორიაში
+      // ვიპოვოთ წყარო კატეგორია
+      if (imageData.productId === "category-move") {
+        let sourceCategory = '';
+        Object.entries(categoryImages).forEach(([catId, images]) => {
+          if (images.some(img => img.id === imageData.id || img.image === targetImageUrl)) {
+            sourceCategory = catId;
+          }
+        });
+        
+        // თუ წყარო და სამიზნე კატეგორიები ერთი და იგივეა, გამოვიდეთ ფუნქციიდან
+        if (sourceCategory === categoryId) {
+          // console.log("ფოტო იგივე კატეგორიაში გადავიტანეთ, ცვლილება არ კეთდება");
+          return;
         }
-      ]);
+      }
       
-      // Move image from allImages to categoryImages
-      setAllImages(prevImages => 
-        prevImages.filter(img => img.id !== imageData.id)
-      );
+      // თუ სურათი არის კატეგორიიდან გადმოტანილი
+      if (imageData.productId === "category-move") {
+  
+        
+        // მოვძებნოთ პროდუქტის ID რომელსაც ეს სურათი ეკუთვნის
+        let foundProductId = '';
+        products.forEach(product => {
+          if (product.images && product.images.includes(targetImageUrl)) {
+            foundProductId = product.id;
+          }
+        });
+        
+        if (foundProductId) {
+          
+          // მოვძებნოთ პროდუქტი, რომ ვიცოდეთ მისი ორიგინალი categoryId
+          const product = products.find(p => p.id === foundProductId);
+          
+          // თუ ფოტო ბრუნდება თავის ორიგინალ კატეგორიაში, წავშალოთ pendingChanges-დან
+          if (product?.categoryId === categoryId) {
+            
+            // წავშალოთ ეს პროდუქტი pendingChanges-დან
+            setPendingChanges(prevChanges => 
+              prevChanges.filter(change => change.productId !== foundProductId)
+            );
+          } else {
+            // შევამოწმოთ არის თუ არა ეს ნამდვილი ცვლილება 
+            // თუ პროდუქტის კატეგორია უკვე დაყენებულია ამავე მნიშვნელობაზე, არ დავამატოთ ცვლილება
+            if (product?.categoryId === categoryId) {
+            } else {
+              // დავამატოთ ცვლილება pending changes-ში მხოლოდ თუ რეალური ცვლილებაა
+              setPendingChanges(prevChanges => {
+                // ჯერ წავშალოთ ნებისმიერი არსებული ცვლილება ამ პროდუქტისთვის
+                const filteredChanges = prevChanges.filter(change => change.productId !== foundProductId);
+                // შემდეგ დავამატოთ ახალი ცვლილება
+                return [
+                  ...filteredChanges, 
+                  { 
+                    imageId: targetImageId, 
+                    productId: foundProductId, 
+                    categoryId 
+                  }
+                ];
+              });
+            }
+          }
+        }
+        
+        // კატეგორიების განახლებამდე ვნახოთ არსებული მდგომარეობა
+
+        
+        // ვიპოვოთ პროდუქტი
+        const currentProduct = products.find(p => p.id === imageData.productId);
+        
+        // შევამოწმოთ, ხომ არ ბრუნდება ფოტო თავის ორიგინალ კატეგორიაში
+        if (currentProduct?.categoryId === categoryId) {
+          
+          // წავშალოთ ეს პროდუქტი pendingChanges-დან
+          setPendingChanges(prevChanges => 
+            prevChanges.filter(change => change.productId !== imageData.productId)
+          );
+        } else {
+          // Store pending change - მხოლოდ თუ რეალური ცვლილებაა
+          setPendingChanges(prevChanges => {
+            // ჯერ წავშალოთ ნებისმიერი არსებული ცვლილება ამ პროდუქტისთვის
+            const filteredChanges = prevChanges.filter(change => change.productId !== imageData.productId);
+            // შემდეგ დავამატოთ ახალი ცვლილება
+            return [
+              ...filteredChanges, 
+              { 
+                imageId: targetImageId, 
+                productId: imageData.productId, 
+                categoryId 
+              }
+            ];
+          });
+        }
+        
+        // ყოველთვის წავშალოთ სურათი allImages-დან როდესაც კატეგორიაში გადაგვაქვს
+        // გამოვიყენოთ targetImageUrl-ც ფილტრაციისთვის, რომ გარანტირებულად ამოვშალოთ
+        setAllImages(prevImages => 
+          prevImages.filter(img => (img.id !== targetImageId && img.image !== targetImageUrl))
+        );
+      }
       
-      // Add image to category
+      // განვახორციელოთ UI-ს განახლება კატეგორიებში
       setCategoryImages(prev => {
+        // შევქმნათ ახალი ობიექტი, რომ არ შევცვალოთ არსებული
         const newCategoryImages = { ...prev };
+        
+        
+        // 1. წავშალოთ სურათი ყველა კატეგორიიდან
+        Object.keys(newCategoryImages).forEach(catId => {
+          // შევინახოთ სურათების რაოდენობა წაშლამდე
+          const beforeCount = newCategoryImages[catId]?.length || 0;
+          
+          if (newCategoryImages[catId]) {
+            newCategoryImages[catId] = newCategoryImages[catId].filter(img => 
+              img.id !== targetImageId && img.image !== targetImageUrl
+            );
+            
+            // შევამოწმოთ შეიცვალა თუ არა რაოდენობა
+            const afterCount = newCategoryImages[catId]?.length || 0;
+            if (beforeCount !== afterCount) {
+            }
+          }
+        });
+        
+        // 2. დავამატოთ სურათი ახალ კატეგორიაში
         if (!newCategoryImages[categoryId]) {
           newCategoryImages[categoryId] = [];
         }
-        newCategoryImages[categoryId] = [
-          ...newCategoryImages[categoryId],
-          { id: imageData.id, image: imageData.image }
-        ];
+        
+        // ვამოწმებთ, უკვე ხომ არ არის ეს სურათი ამ კატეგორიაში
+        const alreadyExists = newCategoryImages[categoryId].some(
+          img => img.id === targetImageId || img.image === targetImageUrl
+        );
+        
+        if (!alreadyExists) {
+          newCategoryImages[categoryId] = [
+            ...newCategoryImages[categoryId],
+            { id: targetImageId, image: targetImageUrl }
+          ];
+        } else {
+        }
+        
         return newCategoryImages;
       });
       
       // Don't show notification for individual image drops
-      
-    } catch (error) {
-      console.error('Error adding to pending changes:', error);
+    } catch (error) { // Changed error to _error to mark as unused
+      console.error('Error handling image drop:', error);
       setUpdateMessage({
         type: 'error',
-        text: 'შეცდომა ცვლილებების დამატებისას'
+        text: ''
       });
       
       // Clear error message after 3 seconds
+      setTimeout(() => {
+        setUpdateMessage(null);
+      }, 3000);
+    }
+  };
+
+  // ახალი ფუნქცია კატეგორიიდან ფოტოს წასაშლელად და კატეგორიის გარეშე განყოფილებაში გადასატანად
+  const handleRemoveFromCategory = (imageData: DragItemType) => {
+    try {
+      
+      // მოვძებნოთ პროდუქტის ID რომელსაც ეს სურათი ეკუთვნის
+      let foundProductId = '';
+      products.forEach(product => {
+        if (product.images && product.images.includes(imageData.image)) {
+          foundProductId = product.id;
+        }
+      });
+      
+      if (!foundProductId) {
+        console.error("ვერ მოიძებნა პროდუქტის ID");
+        return;
+      }
+      
+      
+      // წავშალოთ სურათი ყველა კატეგორიიდან
+      setCategoryImages(prev => {
+        const newCategoryImages = { ...prev };
+        
+        // წავშალოთ ყველა კატეგორიიდან
+        Object.keys(newCategoryImages).forEach(catId => {
+          if (newCategoryImages[catId]) {
+            newCategoryImages[catId] = newCategoryImages[catId].filter(img => 
+              img.id !== imageData.id && img.image !== imageData.image
+            );
+          }
+        });
+        
+        return newCategoryImages;
+      });
+      
+      // დავამატოთ ფოტო allImages სიაში
+      setAllImages(prev => [
+        ...prev,
+        {
+          id: imageData.id,
+          image: imageData.image,
+          productId: foundProductId
+        }
+      ]);
+      
+      // დავამატოთ ცვლილება, რომ პროდუქტს წავუშალოთ კატეგორია
+      setPendingChanges(prevChanges => {
+        // წავშალოთ ნებისმიერი არსებული ცვლილება ამ პროდუქტისთვის
+        const filteredChanges = prevChanges.filter(change => change.productId !== foundProductId);
+        // დავამატოთ ახალი ცვლილება - categoryId: undefined
+        return [
+          ...filteredChanges, 
+          { 
+            imageId: imageData.id, 
+            productId: foundProductId, 
+            categoryId: undefined  // undefined კატეგორია ნიშნავს კატეგორიის წაშლას
+          }
+        ];
+      });
+      
+      setUpdateMessage({
+        type: 'success',
+        text: 'ფოტო გამოტანილია კატეგორიიდან'
+      });
+      
+      setTimeout(() => {
+        setUpdateMessage(null);
+      }, 3000);
+      
+    } catch (error) {
+      console.error('Error removing from category:', error);
+      setUpdateMessage({
+        type: 'error',
+        text: 'შეცდომა ფოტოს კატეგორიიდან გამოტანისას'
+      });
+      
       setTimeout(() => {
         setUpdateMessage(null);
       }, 3000);
@@ -309,11 +664,9 @@ export default function AdminCategories() {
     try {
       // Group changes by product ID to minimize API calls
       const changesByProduct = pendingChanges.reduce((acc, change) => {
-        if (!acc[change.productId]) {
-          acc[change.productId] = change.categoryId;
-        }
+        acc[change.productId] = change.categoryId;
         return acc;
-      }, {} as Record<string, string>);
+      }, {} as Record<string, string | undefined>);
       
       // Apply all changes
       const updatePromises = Object.entries(changesByProduct).map(
@@ -325,7 +678,7 @@ export default function AdminCategories() {
       // Update local state
       setProducts(products.map(product => {
         const newCategoryId = changesByProduct[product.id];
-        if (newCategoryId) {
+        if (newCategoryId !== undefined) {
           return { ...product, categoryId: newCategoryId };
         }
         return product;
@@ -362,10 +715,71 @@ export default function AdminCategories() {
 
   const hasPendingChanges = pendingChanges.length > 0;
 
+  // ფილტრაცია ფოტოებისთვის
+  const filteredAllImages = allImages.filter(img => {
+    // პოვნა productId-ს მიხედვით შესაბამისი პროდუქტი
+    const relatedProduct = products.find(p => p.id === img.productId);
+    
+    // ფასდაკლების ფილტრი
+    let discountFilter = true;
+    if (showDiscountedOnly && relatedProduct) {
+      // @ts-expect-error: ეს ველები არსებობს პროდუქტში, მაგრამ TS ვერ ხედავს
+      discountFilter = relatedProduct.discountPercentage > 0 || relatedProduct.hasPublicDiscount || relatedProduct.isSpecial;
+    }
+      
+    // სახელის და აღწერის ფილტრი
+    const searchFilter = imageSearchTerm.trim() === ''
+      ? true
+      : relatedProduct && (
+          relatedProduct.name.toLowerCase().includes(imageSearchTerm.toLowerCase()) ||
+          (relatedProduct.description && relatedProduct.description.toLowerCase().includes(imageSearchTerm.toLowerCase()))
+        );
+    
+    return relatedProduct && discountFilter && searchFilter;
+  });
+
+  // ფილტრაცია კატეგორიებისთვის
+  const filteredCategories = categorySearchTerm.trim() === '' 
+    ? categories 
+    : categories.filter(cat => 
+        cat.name.toLowerCase().includes(categorySearchTerm.toLowerCase())
+      );
+
+  // ფილტრაცია კატეგორიებში არსებული ფოტოებისთვის
+  // ამ ფილტრაციის ლოგიკას ამჟამად არ ვიყენებთ, მაგრამ შევინარჩუნოთ მომავალი გამოყენებისთვის
+  /* Object.entries(categoryImages).reduce((acc, [catId, images]) => {
+    if (!categorySearchTerm.trim() || categories.find(c => c.id === catId)?.name.toLowerCase().includes(categorySearchTerm.toLowerCase())) {
+      // თუ ფასდაკლების ფილტრი ჩართულია, დავფილტროთ კატეგორიის ფოტოებიც
+      if (showDiscountedOnly) {
+        // მივიღოთ იმ პროდუქტების სურათები, რომლებსაც აქვთ ფასდაკლება
+        const discountedImages = images.filter(img => {
+          const imageUrl = img.image;
+          // მოვძებნოთ პროდუქტი, რომელსაც ეს სურათი ეკუთვნის
+          const relatedProduct = products.find(p => p.images && p.images.includes(imageUrl));
+          if (!relatedProduct) return false;
+          
+          // @ts-expect-error: ეს ველები არსებობს პროდუქტში, მაგრამ TS ვერ ხედავს
+          return relatedProduct.discountPercentage > 0 || relatedProduct.hasPublicDiscount || relatedProduct.isSpecial;
+        });
+        
+        if (discountedImages.length > 0) {
+          acc[catId] = discountedImages;
+        }
+      } else {
+        acc[catId] = images;
+      }
+    }
+    return acc;
+  }, {} as Record<string, {id: string, image: string}[]>); */
+
   return (
     <AdminLayout>
       {isDistributionModalOpen ? (
-        <DndProvider backend={HTML5Backend}>
+        <DndContext 
+          sensors={sensors} 
+          collisionDetection={closestCenter}
+          onDragEnd={handleDragEnd}
+        >
           <div className="h-full w-full flex flex-col">
             <div className="flex justify-between items-center border-b p-4 bg-white shadow-sm">
               <div className="flex items-center gap-2">
@@ -416,22 +830,62 @@ export default function AdminCategories() {
             <div className="flex flex-col md:flex-row gap-4 p-4 overflow-auto h-full">
               {/* Images Section */}
               <div className="w-full md:w-1/2 flex flex-col h-full">
-                <div className="flex items-center gap-2 mb-3 bg-white p-3 rounded-lg shadow-sm">
-                  <ImageIcon className="h-5 w-5 text-primary" />
-                  <h3 className="font-medium">პროდუქტის ფოტოები</h3>
-                  <span className="text-sm text-muted-foreground ml-2">
-                    გადაიტანეთ ფოტოები მარჯვნივ კატეგორიაში
-                  </span>
+                <div className="flex flex-col gap-2 mb-3 bg-white p-3 rounded-lg shadow-sm">
+                  <div className="flex items-center gap-2">
+                    <ImageIcon className="h-5 w-5 text-primary" />
+                    <h3 className="font-medium">კატეგორიის გარეშე ფოტოები</h3>
+                  </div>
+                  
+                  {/* საძიებო ველი ფოტოებისთვის */}
+                  <div className="relative mt-1">
+                    <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      className="pl-8 pr-3 py-1 w-full text-sm"
+                      placeholder="მოძებნეთ ფოტოები პროდუქტის სახელით..."
+                      value={imageSearchTerm}
+                      onChange={(e) => setImageSearchTerm(e.target.value)}
+                    />
+                    {imageSearchTerm && (
+                      <button
+                        className="absolute right-2 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                        onClick={() => setImageSearchTerm('')}
+                      >
+                        <X className="h-4 w-4" />
+                      </button>
+                    )}
+                  </div>
+                  
+                  {/* ფასდაკლების ფილტრი */}
+                  <div className="flex items-center mt-2 pl-1">
+                    <input
+                      type="checkbox"
+                      id="discount-filter"
+                      checked={showDiscountedOnly}
+                      onChange={(e) => setShowDiscountedOnly(e.target.checked)}
+                      className="h-4 w-4 rounded text-primary focus:ring-primary"
+                    />
+                    <label htmlFor="discount-filter" className="ml-2 text-xs font-medium text-gray-700">
+                      მხოლოდ ფასდაკლებული პროდუქტები
+                    </label>
+                  </div>
                 </div>
                 
                 <div className="border rounded-lg overflow-y-auto flex-1 p-4 bg-gray-50 shadow-inner">
+                  {/* დავამატოთ drop ზონა კატეგორიიდან გამოსატანად */}
+                  {/* ეს ზონა მხოლოდ მაშინ აისახება, როდესაც ფოტოები არსებობს კატეგორიებში */}
+                  {Object.values(categoryImages).some(images => images.length > 0) && (
+                    <div className="mb-4">
+                      <UncategorizedDropZone /> {/* Removed pendingImages prop */}
+                    </div>
+                  )}
+                  
                   <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
-                    {allImages.length === 0 ? (
+                    {filteredAllImages.length === 0 ? (
                       <div className="col-span-full py-8 text-center text-muted-foreground">
-                        ფოტოები არ მოიძებნა
+                        {imageSearchTerm ? 'ძიების შედეგად ფოტოები ვერ მოიძებნა' : 'კატეგორიის გარეშე ფოტოები არ მოიძებნა'}
                       </div>
                     ) : (
-                      allImages.map((imageData, index) => (
+                      filteredAllImages.map((imageData, index) => (
                         <DraggableImage
                           key={`${imageData.id}-${index}`}
                           image={imageData.image}
@@ -445,28 +899,62 @@ export default function AdminCategories() {
               
               {/* Categories Section */}
               <div className="w-full md:w-1/2 flex flex-col h-full">
-                <div className="flex items-center gap-2 mb-3 bg-white p-3 rounded-lg shadow-sm">
-                  <Grid className="h-5 w-5 text-primary" />
-                  <h3 className="font-medium">კატეგორიები</h3>
-                  {hasPendingChanges && (
-                    <span className="ml-auto text-sm bg-amber-100 text-amber-800 px-2 py-1 rounded-full font-medium">
-                      {pendingChanges.length} შეუნახავი ცვლილება
-                    </span>
-                  )}
+                <div className="flex flex-col gap-2 mb-3 bg-white p-3 rounded-lg shadow-sm">
+                  <div className="flex items-center gap-2">
+                    <Grid className="h-5 w-5 text-primary" />
+                    <h3 className="font-medium">კატეგორიები</h3>
+                    {hasPendingChanges && (
+                      <span className="ml-auto text-sm bg-amber-100 text-amber-800 px-2 py-1 rounded-full font-medium">
+                        {pendingChanges.length} შეუნახავი ცვლილება
+                      </span>
+                    )}
+                  </div>
+                  
+                  {/* საძიებო ველი კატეგორიებისთვის */}
+                  <div className="relative mt-1">
+                    <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      className="pl-8 pr-3 py-1 w-full text-sm"
+                      placeholder="მოძებნეთ კატეგორიები სახელით..."
+                      value={categorySearchTerm}
+                      onChange={(e) => setCategorySearchTerm(e.target.value)}
+                    />
+                    {categorySearchTerm && (
+                      <button
+                        className="absolute right-2 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                        onClick={() => setCategorySearchTerm('')}
+                      >
+                        <X className="h-4 w-4" />
+                      </button>
+                    )}
+                  </div>
+                  
+                  {/* ფასდაკლების ფილტრი კატეგორიებისთვის */}
+                  <div className="flex items-center mt-2 pl-1">
+                    <input
+                      type="checkbox"
+                      id="discount-filter-categories"
+                      checked={showDiscountedOnly}
+                      onChange={(e) => setShowDiscountedOnly(e.target.checked)}
+                      className="h-4 w-4 rounded text-primary focus:ring-primary"
+                    />
+                    <label htmlFor="discount-filter-categories" className="ml-2 text-xs font-medium text-gray-700">
+                      მხოლოდ ფასდაკლებული პროდუქტები
+                    </label>
+                  </div>
                 </div>
                 
                 <div className="border rounded-lg overflow-y-auto flex-1 p-4 bg-gray-50 shadow-inner">
                   <div className="space-y-4">
-                    {categories.length === 0 ? (
+                    {filteredCategories.length === 0 ? (
                       <div className="py-8 text-center text-muted-foreground">
-                        კატეგორიები არ მოიძებნა
+                        {categorySearchTerm ? 'ძიების შედეგად კატეგორიები ვერ მოიძებნა' : 'კატეგორიები არ მოიძებნა'}
                       </div>
                     ) : (
-                      categories.map(category => (
+                      filteredCategories.map(category => (
                         <CategoryDropZone
                           key={category.id}
                           category={category}
-                          onImageDrop={handleImageDrop}
                           pendingImages={categoryImages[category.id] || []}
                         />
                       ))
@@ -476,7 +964,7 @@ export default function AdminCategories() {
               </div>
             </div>
           </div>
-        </DndProvider>
+        </DndContext>
       ) : (
         <div className="space-y-6">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">

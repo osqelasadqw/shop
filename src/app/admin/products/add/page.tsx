@@ -18,7 +18,6 @@ import {
   Card, 
   CardContent, 
   CardDescription, 
-  CardFooter, 
   CardHeader, 
   CardTitle 
 } from '@/components/ui/card';
@@ -222,15 +221,15 @@ export default function AddProductPage() {
                       value={formData.categoryId} 
                       onValueChange={handleSelectChange}
                     >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select a category" />
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder="აირჩიეთ კატეგორია" />
                       </SelectTrigger>
-                      <SelectContent>
-                        {categories.map((category) => (
-                          <SelectItem key={category.id} value={category.id}>
-                            {category.name}
-                          </SelectItem>
-                        ))}
+                      <SelectContent className="after:content-[''] after:block after:h-3">
+                        <SelectItem value="electronics">ელექტრონიკა</SelectItem>
+                        <SelectItem value="clothing">ტანსაცმელი</SelectItem>
+                        <SelectItem value="books">წიგნები</SelectItem>
+                        <SelectItem value="home">სახლი</SelectItem>
+                        <SelectItem value="other">სხვა</SelectItem>
                       </SelectContent>
                     </Select>
                   )}

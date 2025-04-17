@@ -23,6 +23,19 @@ export const useCart = () => {
   return context;
 };
 
+// გამოითვალოს პროდუქტის ფასი ფასდაკლების გათვალისწინებით
+const calculateProductPrice = (product: Product): number => {
+  const hasActiveDiscount = product.promoActive && product.discountPercentage;
+  
+  // მხოლოდ საჯარო ფასდაკლება გამოჩნდეს პროდუქტის გვერდზე და კალათაში
+  if (hasActiveDiscount && product.hasPublicDiscount) {
+    return product.price * (1 - (product.discountPercentage || 0) / 100);
+  }
+  
+  // პრომოკოდი არ გამოიყენება კალათაში ავტომატურად, მხოლოდ კალათის გვერდზე შეყვანისას
+  return product.price;
+};
+
 export const CartProvider = ({ children }: { children: React.ReactNode }) => {
   const [items, setItems] = useState<CartItem[]>([]);
 
@@ -84,7 +97,12 @@ export const CartProvider = ({ children }: { children: React.ReactNode }) => {
   };
 
   const totalItems = items.reduce((total, item) => total + item.quantity, 0);
-  const totalPrice = items.reduce((total, item) => total + (item.product.price * item.quantity), 0);
+  
+  // საჯარო ფასდაკლების გათვალისწინება ჯამური ფასის გამოთვლისას
+  const totalPrice = items.reduce((total, item) => {
+    const itemPrice = calculateProductPrice(item.product);
+    return total + (itemPrice * item.quantity);
+  }, 0);
 
   const value: CartContextType = {
     items,

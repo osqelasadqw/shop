@@ -120,3 +120,17 @@
     @apply bg-background text-foreground;
   }
 }
+
+@layer components {
+  @responsive {
+    /* xs breakpoint კლასები */
+    @media (min-width: 480px) {
+      .xs\:inline {
+        display: inline;
+      }
+      .xs\:hidden {
+        display: none;
+      }
+    }
+  }
+}

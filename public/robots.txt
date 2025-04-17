@@ -1,0 +1,6 @@
+# ყველა რობოტს აქვს წვდომა საიტის ყველა ნაწილზე
+User-agent: *
+Allow: /
+
+# Sitemap მითითება
+Sitemap: https://yourdomain.com/sitemap.xml 
