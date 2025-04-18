@@ -2,6 +2,11 @@
   "name": "onlyne-store",
   "version": "0.1.0",
   "private": true,
+  "homepage": "https://osqelasadqw.github.io/shop",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/osqelasadqw/shop.git"
+  },
   "scripts": {
     "dev": "next dev",
     "build": "next build",
