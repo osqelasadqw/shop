@@ -30,15 +30,35 @@ jobs:
         with:
           static_site_generator: next
       - name: Install dependencies
-        run: npm install --legacy-peer-deps
+        run: npm install --legacy-peer-deps --verbose
+      - name: Debug project structure
+        run: |
+          echo "Project structure:"
+          ls -la
+          echo "Next.js config:"
+          cat next.config.js
       - name: Build with Next.js
         run: npm run build --legacy-peer-deps
+      - name: Debug output directory
+        run: |
+          echo "Output directory structure:"
+          ls -la out || echo "No 'out' directory found"
+          echo "Root content:"
+          find . -maxdepth 1 -type f | sort
       - name: Fix routes for GitHub Pages
         run: |
           touch out/.nojekyll
-          # Redundant with basePath, but just to be safe
           if [ -d "out/shop" ]; then
+            echo "Copying contents from out/shop to out root"
             cp -r out/shop/* out/
+            echo "After copying:"
+            ls -la out
+          else
+            echo "No out/shop directory found, skipping copy"
+          fi
+          echo "Creating custom 404 page if needed"
+          if [ ! -f "out/404.html" ]; then
+            cp out/index.html out/404.html || echo "Could not create 404.html"
           fi
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
