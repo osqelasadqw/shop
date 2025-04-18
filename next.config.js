@@ -1,6 +1,5 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  output: 'export',
   basePath: '/shop',
   typescript: {
     // ჩავთიშოთ typescript შემოწმება ბილდის დროს

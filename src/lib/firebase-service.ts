@@ -139,6 +139,9 @@ export const getProducts = async (): Promise<Product[]> => {
   }
 };
 
+// ალიასი getProducts ფუნქციისთვის, რომელიც გამოიყენება generateStaticParams-ში
+export const getAllProducts = getProducts;
+
 export const getProductsByCategory = async (categoryId: string): Promise<Product[]> => {
   try {
     const productsRef = collection(db, 'products');
