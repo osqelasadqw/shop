@@ -31,12 +31,16 @@ jobs:
           static_site_generator: next
       - name: Install dependencies
         run: npm install --legacy-peer-deps --verbose
-      - name: Debug project structure
+      - name: Debug files to find use client directive
         run: |
-          echo "Project structure:"
-          ls -la
-          echo "Next.js config:"
-          cat next.config.js
+          echo "Checking client directive in files:"
+          grep -r "'use client'" src/app/admin/products/[id]/page.tsx || true
+          grep -r "'use client'" src/app/shop/product/[id]/page.tsx || true
+          echo "Trying to fix client directive conflicts with generateStaticParams:"
+          sed -i '/import { getAllProducts/d' src/app/admin/products/[id]/page.tsx || true
+          sed -i '/export async function generateStaticParams/,/^}/d' src/app/admin/products/[id]/page.tsx || true
+          sed -i '/import { getAllProducts/d' src/app/shop/product/[id]/page.tsx || true
+          sed -i '/export async function generateStaticParams/,/^}/d' src/app/shop/product/[id]/page.tsx || true
       - name: Build with Next.js
         run: npm run build --legacy-peer-deps
       - name: Debug output directory
