@@ -3,13 +3,57 @@
   <head>
     <meta charset="utf-8">
     <title>OnLyne Shop - გადამისამართება...</title>
-    <meta http-equiv="refresh" content="0;url=/shop/" />
+    <meta http-equiv="refresh" content="3;url=/shop/" />
     <script>
-      window.location.href = "/shop/";
+      // გავაუქმეთ მყისიერი JavaScript გადამისამართება
+      // window.location.href = "/shop/";
     </script>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        text-align: center;
+        margin: 0;
+        padding: 0;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 100vh;
+        background-color: #f5f5f5;
+      }
+      .container {
+        max-width: 600px;
+        padding: 30px;
+        background-color: white;
+        border-radius: 10px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+      }
+      h1 {
+        color: #333;
+        margin-bottom: 20px;
+      }
+      p {
+        margin-bottom: 30px;
+        color: #666;
+      }
+      a {
+        display: inline-block;
+        padding: 10px 20px;
+        background-color: #4a90e2;
+        color: white;
+        text-decoration: none;
+        border-radius: 5px;
+        font-weight: bold;
+      }
+      a:hover {
+        background-color: #3a80d2;
+      }
+    </style>
   </head>
   <body>
-    <h1>გადამისამართება მაღაზიაზე...</h1>
-    <p>თუ ავტომატურად არ გადამისამართდით, <a href="/shop/">დააჭირეთ აქ</a>.</p>
+    <div class="container">
+      <h1>გადამისამართება მაღაზიაზე...</h1>
+      <p>თქვენ ავტომატურად გადამისამართდებით 3 წამში.<br>თუ ავტომატური გადამისამართება არ მუშაობს, დააჭირეთ ქვემოთ მოცემულ ღილაკს:</p>
+      <a href="/shop/">მაღაზიაზე გადასვლა</a>
+    </div>
   </body>
 </html> 

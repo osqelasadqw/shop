@@ -3,42 +3,87 @@
   <head>
     <meta charset="utf-8">
     <title>გადამისამართება...</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        text-align: center;
+        margin: 0;
+        padding: 0;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 100vh;
+        background-color: #f5f5f5;
+      }
+      .container {
+        max-width: 600px;
+        padding: 30px;
+        background-color: white;
+        border-radius: 10px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+      }
+      h1 {
+        color: #333;
+        margin-bottom: 20px;
+      }
+      p {
+        margin-bottom: 30px;
+        color: #666;
+      }
+      a {
+        display: inline-block;
+        padding: 10px 20px;
+        background-color: #4a90e2;
+        color: white;
+        text-decoration: none;
+        border-radius: 5px;
+        font-weight: bold;
+      }
+      a:hover {
+        background-color: #3a80d2;
+      }
+    </style>
     <script>
       // ეს სკრიპტი დაეხმარება სინგლ-ფეიჯ აპლიკაციას გაუმკლავდეს გადამისამართებას GitHub Pages-ზე
-      (function() {
-        // გადამისამართების URL-ის შექმნა
-        var basePath = '/shop';
-        var l = window.location;
-        var host = l.protocol + '//' + l.hostname + (l.port ? ':' + l.port : '');
-        
-        // გადავამისამართოთ მთავარი დომეინიდან /shop-ზე
-        if (l.pathname === '/' || l.pathname === '/index.html') {
-          window.location.href = host + basePath + '/';
-          return;
-        }
-        
-        // დანარჩენი URL-ებისთვის, შევინახოთ მათი მისამართი
-        var pathWithoutBase = l.pathname;
-        if (!pathWithoutBase.startsWith(basePath)) {
-          // თუ მისამართი არ იწყება /shop-ით, დავამატოთ ეს პრეფიქსი
-          var segments = pathWithoutBase.split('/').filter(function(s) { return s.length > 0; });
-          var redirectUrl = basePath + '/' + segments.join('/') + (l.search || '') + (l.hash || '');
+      setTimeout(function() {
+        (function() {
+          // გადამისამართების URL-ის შექმნა
+          var basePath = '/shop';
+          var l = window.location;
+          var host = l.protocol + '//' + l.hostname + (l.port ? ':' + l.port : '');
           
-          // შევინახოთ გადამისამართების URL სესიაში
-          sessionStorage.setItem('redirectUrl', redirectUrl);
+          // გადავამისამართოთ მთავარი დომეინიდან /shop-ზე
+          if (l.pathname === '/' || l.pathname === '/index.html') {
+            window.location.href = host + basePath + '/';
+            return;
+          }
           
-          // გადავამისამართოთ ინდექს გვერდზე
-          window.location.href = host + basePath + '/';
-        } else {
-          // თუ უკვე /shop-ით იწყება, უბრალოდ გადავამისამართოთ მთავარ shop გვერდზე
-          window.location.href = host + basePath + '/';
-        }
-      })();
+          // დანარჩენი URL-ებისთვის, შევინახოთ მათი მისამართი
+          var pathWithoutBase = l.pathname;
+          if (!pathWithoutBase.startsWith(basePath)) {
+            // თუ მისამართი არ იწყება /shop-ით, დავამატოთ ეს პრეფიქსი
+            var segments = pathWithoutBase.split('/').filter(function(s) { return s.length > 0; });
+            var redirectUrl = basePath + '/' + segments.join('/') + (l.search || '') + (l.hash || '');
+            
+            // შევინახოთ გადამისამართების URL სესიაში
+            sessionStorage.setItem('redirectUrl', redirectUrl);
+            
+            // გადავამისამართოთ ინდექს გვერდზე
+            window.location.href = host + basePath + '/';
+          } else {
+            // თუ უკვე /shop-ით იწყება, უბრალოდ გადავამისამართოთ მთავარ shop გვერდზე
+            window.location.href = host + basePath + '/';
+          }
+        })();
+      }, 1500); // 1.5 წამიანი დაყოვნება
     </script>
   </head>
   <body>
-    <h1>გადამისამართება...</h1>
-    <p>თუ ავტომატურად არ გადამისამართდით, <a id="redirect-link" href="/shop/">დააჭირეთ აქ</a></p>
+    <div class="container">
+      <h1>გვერდი ვერ მოიძებნა</h1>
+      <p>თქვენ ავტომატურად გადამისამართდებით მთავარ გვერდზე მალე.<br>თუ ავტომატური გადამისამართება არ მუშაობს, დააჭირეთ ქვემოთ მოცემულ ღილაკს:</p>
+      <a id="redirect-link" href="/shop/">მაღაზიაზე გადასვლა</a>
+    </div>
     <script>
       document.getElementById('redirect-link').href = '/shop/';
     </script>
