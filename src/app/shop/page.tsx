@@ -544,11 +544,15 @@ export default function ShopPage() {
                                     className="group flex flex-col h-full w-full"
                                   >
                                     <div className="flex-1 flex items-center justify-center relative overflow-hidden min-h-[200px] p-0 pt-0 pb-0">
-                                      <img
+                                      <Image
                                         src={productImage}
                                         alt={product.name}
-                                        style={{ objectFit: 'cover', objectPosition: 'center', position: 'absolute', width: '100%', height: '100%' }}
-                                        loading={index === 0 ? "eager" : "lazy"}
+                                        fill
+                                        style={{ objectFit: 'cover', objectPosition: 'center' }}
+                                        sizes="(max-width: 639px) 100vw, (max-width: 767px) 100vw, (max-width: 1023px) 100vw, (max-width: 1279px) 100vw, 50vw"
+                                        priority={index === 0}
+                                        placeholder="blur"
+                                        blurDataURL="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII="
                                         className="transition-transform duration-300 group-hover:scale-105"
                                       />
                                     </div>

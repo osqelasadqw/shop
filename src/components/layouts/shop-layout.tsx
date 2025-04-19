@@ -216,7 +216,7 @@ export function ShopLayout({ children }: ShopLayoutProps) {
                       <div className="flex items-center space-x-4">
                         <div className="flex items-center space-x-2">
                           {user.photoURL && (
-                            <img 
+                            <Image 
                               src={user.photoURL} 
                               alt="User profile" 
                               width={32}

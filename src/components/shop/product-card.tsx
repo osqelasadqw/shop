@@ -70,13 +70,17 @@ export function ProductCard({ product, loading = false, specialBadge = false, is
               <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
             </div>
           ) : (
-            <img
+            <Image
               src={product.images[0] || '/placeholder.png'}
               alt={product.name}
               width={200}
               height={200}
               className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-200"
               loading={isPriority ? "eager" : "lazy"}
+              priority={isPriority}
+              sizes="(max-width: 640px) 100vw, (max-width: 768px) 50vw, 33vw"
+              placeholder="blur"
+              blurDataURL="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII="
               onError={(e) => {
                 const target = e.target as HTMLImageElement;
                 target.onerror = null;
