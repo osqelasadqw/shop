@@ -35,7 +35,8 @@ const ZoomedImageModal = dynamic(() => import('@/components/modals/zoomed-image-
   )
 });
 
-export default function ProductDetailClient({ id }: { id: string }) {
+export default function ProductDetailClient({ id: routeId }: { id?: string }) {
+  const [id, setId] = useState(routeId || '');
   const [product, setProduct] = useState<Product | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [quantity, setQuantity] = useState(1);
@@ -64,18 +65,47 @@ export default function ProductDetailClient({ id }: { id: string }) {
     };
   }, []);
 
+  // იდენტიფიკატორის ამოღება localStorage-დან თუ არ არის მოწოდებული როუტიდან
+  useEffect(() => {
+    if (!routeId && typeof window !== 'undefined') {
+      const storedId = localStorage.getItem('currentProductId');
+      if (storedId) {
+        console.log('ID ამოღებულია localStorage-დან:', storedId);
+        setId(storedId);
+      } else {
+        // გამოვიტანოთ ურლ-დან ID-ს ამოღების მცდელობა
+        try {
+          const pathParts = window.location.pathname.split('/');
+          const productIndex = pathParts.indexOf('product');
+          if (productIndex !== -1 && productIndex < pathParts.length - 1) {
+            const productId = pathParts[productIndex + 1];
+            console.log('ID ამოღებულია URL-დან:', productId);
+            setId(productId);
+          } else {
+            setError('პროდუქტის ID ვერ მოიძებნა');
+          }
+        } catch (e) {
+          console.error('შეცდომა ID-ის ამოღებისას URL-დან:', e);
+          setError('პროდუქტის ID ვერ მოიძებნა');
+        }
+      }
+    }
+  }, [routeId]);
+
   useEffect(() => {
     const fetchProduct = async () => {
       try {
         setIsLoading(true);
         if (!id) return;
         
+        console.log('ვიწყებთ პროდუქტის ჩატვირთვას ID-ით:', id);
         const productData = await getProductById(id);
         if (!productData) {
           setError('პროდუქტი ვერ მოიძებნა');
           return;
         }
         
+        console.log('პროდუქტი ჩატვირთულია:', productData.name);
         setProduct(productData);
         
         // მხოლოდ საჯარო ფასდაკლების შემოწმება
@@ -95,12 +125,15 @@ export default function ProductDetailClient({ id }: { id: string }) {
         }
       } catch (error) {
         console.error('Error fetching product:', error);
+        setError('პროდუქტის ჩატვირთვა ვერ მოხერხდა');
       } finally {
         setIsLoading(false);
       }
     };
 
-    fetchProduct();
+    if (id) {
+      fetchProduct();
+    }
   }, [id]);
 
   const fetchRelatedProducts = async (categoryId: string, currentProductId: string) => {

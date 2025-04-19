@@ -10,6 +10,7 @@ import { ShoppingCart, Tag, Percent } from 'lucide-react';
 import { cn } from "@/lib/utils";
 import { AspectRatio } from "@/components/ui/aspect-ratio";
 import { Badge } from "@/components/ui/badge";
+import { useRouter } from 'next/navigation';
 
 interface ProductCardProps {
   product: Product;
@@ -20,11 +21,25 @@ interface ProductCardProps {
 
 export function ProductCard({ product, loading = false, specialBadge = false, isPriority = false }: ProductCardProps) {
   const { addToCart } = useCart();
+  const router = useRouter();
   
   const handleAddToCart = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
     addToCart(product);
+  };
+
+  const handleProductClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    
+    // შევინახოთ პროდუქტის ID localStorage-ში
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('currentProductId', product.id);
+      console.log('პროდუქტის ID შენახულია:', product.id);
+      
+      // გადავიდეთ პროდუქტის გვერდზე პირდაპირ
+      window.location.href = `${window.location.origin}/shop/shop/product/${product.id}/`;
+    }
   };
 
   // Default image if no images are available
@@ -43,9 +58,9 @@ export function ProductCard({ product, loading = false, specialBadge = false, is
     : null;
 
   return (
-    <Link 
-      href={`/shop/product/${product.id}`} 
-      className="block border rounded-lg overflow-hidden shadow-sm hover:shadow-lg transition-all bg-white relative"
+    <div 
+      onClick={handleProductClick}
+      className="block border rounded-lg overflow-hidden shadow-sm hover:shadow-lg transition-all bg-white relative cursor-pointer"
     >
       {/* სპეციალური შეთავაზების ბეჯი */}
       {specialBadge && (
@@ -153,6 +168,6 @@ export function ProductCard({ product, loading = false, specialBadge = false, is
           )}
         </div>
       </div>
-    </Link>
+    </div>
   );
 } 

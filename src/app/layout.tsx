@@ -27,7 +27,9 @@ const handleRscErrorsScript = `
   if (typeof window !== 'undefined') {
     // RSC შეცდომების დამუშავება
     window.addEventListener('error', function(event) {
-      if (event.filename && event.filename.includes('index.txt?_rsc=')) {
+      if (event.filename && 
+         (event.filename.includes('index.txt?_rsc=') || 
+          event.filename.includes('/product/'))) {
         // შევაჩეროთ შეცდომა
         event.preventDefault();
         event.stopPropagation();
@@ -40,15 +42,64 @@ const handleRscErrorsScript = `
     const originalFetch = window.fetch;
     window.fetch = function(resource, options) {
       // დავბლოკოთ RSC რესურსების მოთხოვნები
-      if (resource && typeof resource === 'string' && resource.includes('index.txt?_rsc=')) {
-        // დავაბრუნოთ ცარიელი პასუხი წარმატებული სტატუსით
-        return Promise.resolve(new Response(JSON.stringify({ blocked: true }), {
-          status: 200,
-          headers: { 'Content-Type': 'application/json' }
-        }));
+      if (resource && typeof resource === 'string') {
+        // ვამოწმებთ არის თუ არა RSC მოთხოვნა
+        if (resource.includes('index.txt?_rsc=')) {
+          console.log('დაბლოკილი RSC მოთხოვნა:', resource);
+          // დავაბრუნოთ ცარიელი პასუხი წარმატებული სტატუსით
+          return Promise.resolve(new Response(JSON.stringify({ blocked: true }), {
+            status: 200,
+            headers: { 'Content-Type': 'application/json' }
+          }));
+        }
+        
+        // თუ მომხმარებელი ცდილობს პროდუქტის გვერდზე გადასვლას, დავაფიქსიროთ
+        if (resource.includes('/shop/product/') && !resource.includes('index.txt')) {
+          console.log('პროდუქტის გვერდის მოთხოვნა:', resource);
+        }
       }
       return originalFetch(resource, options);
     };
+    
+    // დავამატოთ კლიკის მსმენელი დოკუმენტზე პროდუქტის ბმულებისთვის
+    document.addEventListener('click', function(e) {
+      const target = e.target as HTMLElement;
+      const link = target.closest('a');
+      
+      if (link) {
+        const href = link.getAttribute('href');
+        if (href && href.includes('/shop/product/')) {
+          // ვაპრევენთოთ ნაგულისხმევი ქცევა
+          e.preventDefault();
+          
+          // ვიპოვოთ პროდუქტის ID
+          const idMatch = href.match(/\/shop\/product\/([^\/]+)/);
+          if (idMatch && idMatch[1]) {
+            const productId = idMatch[1];
+            console.log('პროდუქტის ID:', productId);
+            
+            // შევინახოთ პროდუქტის ID localStorage-ში
+            localStorage.setItem('currentProductId', productId);
+            
+            // გადავიდეთ პროდუქტის გვერდზე
+            window.location.href = \`\${window.location.origin}/shop/shop/product/\${productId}/\`;
+          }
+        }
+      }
+    }, true);
+    
+    // მარშრუტიზაციის ლოგიკა პროდუქტის გვერდებისთვის
+    if (window.location.pathname.includes('/shop/product/')) {
+      console.log('პროდუქტის გვერდზე ვართ:', window.location.pathname);
+      // წავიკითხოთ პროდუქტის ID
+      const pathParts = window.location.pathname.split('/');
+      const productIndex = pathParts.indexOf('product');
+      if (productIndex !== -1 && productIndex < pathParts.length - 1) {
+        const productId = pathParts[productIndex + 1];
+        console.log('პროდუქტის ID გამოტანილი:', productId);
+        localStorage.setItem('currentProductId', productId);
+      }
+    }
   }
 `;
 
