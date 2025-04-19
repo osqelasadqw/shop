@@ -2,7 +2,7 @@ name: Deploy Next.js site to Pages
 
 on:
   push:
-    branches: ["gh-pages"]
+    branches: ["main", "master"]
   workflow_dispatch:
 
 permissions:
@@ -27,14 +27,78 @@ jobs:
           cache: 'npm'
       - name: Setup Pages
         uses: actions/configure-pages@v4
+        with:
+          static_site_generator: next
       - name: Install dependencies
-        run: npm ci
+        run: npm install --legacy-peer-deps
+      - name: Update config to include output:export
+        run: |
+          echo "Updated config to add output:export"
+          sed -i 's/\/\/ output: .export./output: "export",/' next.config.js
+          cat next.config.js
+      - name: Disable dynamic routes for [id] pages
+        run: |
+          # დროებით წაშალეთ ან მოდიფიკაცია გაუკეთეთ დინამიურ გვერდებს
+          echo "Disabling dynamic routes that cause problems in static export"
+          if [ -f "src/app/admin/products/[id]/page.tsx" ]; then
+            mv src/app/admin/products/[id]/page.tsx src/app/admin/products/[id]/page.tsx.bak
+            echo "export default function Page() { return null; }" > src/app/admin/products/[id]/page.tsx
+          fi
+          if [ -f "src/app/admin/products/edit/[id]/page.tsx" ]; then
+            mv src/app/admin/products/edit/[id]/page.tsx src/app/admin/products/edit/[id]/page.tsx.bak 
+            echo "export default function Page() { return null; }" > src/app/admin/products/edit/[id]/page.tsx
+          fi
+          
+          # ეს შეზღუდვა ვრცელდება ყველა დინამიურ როუტერზე, რომელიც იყენებს generateStaticParams()
+          find src/app -type d -name "[*]" -o -name "(*)" -o -name "{*}" | while read -r dir; do
+            if [ -f "$dir/page.tsx" ]; then
+              # შევამოწმოთ თუ ფაილი შეიცავს გენერატეს
+              if grep -q "generateStaticParams" "$dir/page.tsx"; then
+                echo "Simplifying dynamic route in $dir/page.tsx"
+                mv "$dir/page.tsx" "$dir/page.tsx.bak"
+                echo "export default function Page() { return null; }" > "$dir/page.tsx"
+              fi
+            fi
+          done
       - name: Build with Next.js
         run: npm run build
+      - name: Debug output directory
+        run: |
+          echo "Output directory structure:"
+          ls -la
+          find . -name "out" -type d
+          if [ -d "out" ]; then
+            ls -la out
+          fi
+      - name: Fix routes for GitHub Pages
+        run: |
+          if [ ! -d "out" ]; then
+            echo "Creating out directory"
+            mkdir -p out
+          fi
+          
+          # Create .nojekyll file
+          touch out/.nojekyll
+          
+          # Check if we need to copy files from out/shop to out
+          if [ -d "out/shop" ]; then
+            echo "Copying contents from out/shop to out root"
+            cp -r out/shop/* out/
+          fi
+          
+          # Create 404 page if needed
+          if [ ! -f "out/404.html" ]; then
+            if [ -f "out/index.html" ]; then
+              cp out/index.html out/404.html
+              echo "Created 404.html from index.html"
+            else
+              echo "No index.html found, could not create 404.html"
+            fi
+          fi
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: ./.next
+          path: ./out
 
   deploy:
     environment:
