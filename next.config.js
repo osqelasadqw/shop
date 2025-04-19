@@ -8,6 +8,18 @@ const nextConfig = {
   trailingSlash: true,
   reactStrictMode: true,
   
+  // დინამიური მარშრუტების გამორიცხვა
+  experimental: {
+    outputFileTracingExcludes: {
+      '/admin/products/**': [
+        'node_modules/**',
+      ],
+      '/shop/product/**': [
+        'node_modules/**',
+      ],
+    },
+  },
+  
   images: {
     domains: [
       'firebasestorage.googleapis.com',

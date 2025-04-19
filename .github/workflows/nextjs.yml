@@ -31,6 +31,42 @@ jobs:
           static_site_generator: next
       - name: Install dependencies
         run: npm install --legacy-peer-deps
+      - name: Fix dynamic routes for static export
+        run: |
+          echo "Adding generateStaticParams to dynamic routes for static export"
+          
+          # ადმინის პროდუქტების რედაქტირების გვერდი
+          if [ -d "src/app/admin/products/edit/[id]" ]; then
+            echo 'export default function Page() { return null; }' > src/app/admin/products/edit/[id]/page.tsx
+            echo 'export function generateStaticParams() { return [{id: "placeholder"}]; }' >> src/app/admin/products/edit/[id]/page.tsx
+            echo "Fixed admin/products/edit/[id] dynamic route"
+          fi
+          
+          # ადმინის პროდუქტების ნახვის გვერდი
+          if [ -d "src/app/admin/products/[id]" ]; then
+            echo 'export default function Page() { return null; }' > src/app/admin/products/[id]/page.tsx
+            echo 'export function generateStaticParams() { return [{id: "placeholder"}]; }' >> src/app/admin/products/[id]/page.tsx
+            echo "Fixed admin/products/[id] dynamic route"
+          fi
+          
+          # მაღაზიის პროდუქტის დეტალების გვერდი
+          if [ -d "src/app/shop/product/[id]" ]; then
+            echo 'export default function Page() { return null; }' > src/app/shop/product/[id]/page.tsx
+            echo 'export function generateStaticParams() { return [{id: "placeholder"}]; }' >> src/app/shop/product/[id]/page.tsx
+            echo "Fixed shop/product/[id] dynamic route"
+          fi
+          
+          # მოვძებნოთ ყველა დარჩენილი დინამიური მარშრუტი
+          find src/app -path "*/[*]*" -type d | while read -r dir; do
+            echo "Found dynamic route directory: $dir"
+            page_file="$dir/page.tsx"
+            if [ -f "$page_file" ]; then
+              if ! grep -q "generateStaticParams" "$page_file"; then
+                echo 'export function generateStaticParams() { return [{id: "placeholder"}]; }' >> "$page_file"
+                echo "Added generateStaticParams to $page_file"
+              fi
+            fi
+          done
       - name: Build with Next.js
         run: npm run build
       - name: Create .nojekyll file
