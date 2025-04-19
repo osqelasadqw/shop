@@ -2,7 +2,7 @@ name: Deploy Next.js site to Pages
 
 on:
   push:
-    branches: ["gh-pages"]
+    branches: ["main", "master"]
   workflow_dispatch:
 
 permissions:
@@ -30,40 +30,70 @@ jobs:
         with:
           static_site_generator: next
       - name: Install dependencies
-        run: npm install --legacy-peer-deps --verbose
-      - name: Debug files to find use client directive
+        run: npm install --legacy-peer-deps
+      - name: Update config to include output:export
         run: |
-          echo "Checking client directive in files:"
-          grep -r "'use client'" src/app/admin/products/[id]/page.tsx || true
-          grep -r "'use client'" src/app/shop/product/[id]/page.tsx || true
-          echo "Trying to fix client directive conflicts with generateStaticParams:"
-          sed -i '/import { getAllProducts/d' src/app/admin/products/[id]/page.tsx || true
-          sed -i '/export async function generateStaticParams/,/^}/d' src/app/admin/products/[id]/page.tsx || true
-          sed -i '/import { getAllProducts/d' src/app/shop/product/[id]/page.tsx || true
-          sed -i '/export async function generateStaticParams/,/^}/d' src/app/shop/product/[id]/page.tsx || true
+          echo "Updated config to add output:export"
+          sed -i 's/\/\/ output: .export./output: "export",/' next.config.js
+          cat next.config.js
+      - name: Disable dynamic routes for [id] pages
+        run: |
+          # დროებით წაშალეთ ან მოდიფიკაცია გაუკეთეთ დინამიურ გვერდებს
+          echo "Disabling dynamic routes that cause problems in static export"
+          if [ -f "src/app/admin/products/[id]/page.tsx" ]; then
+            mv src/app/admin/products/[id]/page.tsx src/app/admin/products/[id]/page.tsx.bak
+            echo "export default function Page() { return null; }" > src/app/admin/products/[id]/page.tsx
+          fi
+          if [ -f "src/app/admin/products/edit/[id]/page.tsx" ]; then
+            mv src/app/admin/products/edit/[id]/page.tsx src/app/admin/products/edit/[id]/page.tsx.bak 
+            echo "export default function Page() { return null; }" > src/app/admin/products/edit/[id]/page.tsx
+          fi
+          
+          # ეს შეზღუდვა ვრცელდება ყველა დინამიურ როუტერზე, რომელიც იყენებს generateStaticParams()
+          find src/app -type d -name "[*]" -o -name "(*)" -o -name "{*}" | while read -r dir; do
+            if [ -f "$dir/page.tsx" ]; then
+              # შევამოწმოთ თუ ფაილი შეიცავს გენერატეს
+              if grep -q "generateStaticParams" "$dir/page.tsx"; then
+                echo "Simplifying dynamic route in $dir/page.tsx"
+                mv "$dir/page.tsx" "$dir/page.tsx.bak"
+                echo "export default function Page() { return null; }" > "$dir/page.tsx"
+              fi
+            fi
+          done
       - name: Build with Next.js
-        run: npm run build --legacy-peer-deps
+        run: npm run build
       - name: Debug output directory
         run: |
           echo "Output directory structure:"
-          ls -la out || echo "No 'out' directory found"
-          echo "Root content:"
-          find . -maxdepth 1 -type f | sort
+          ls -la
+          find . -name "out" -type d
+          if [ -d "out" ]; then
+            ls -la out
+          fi
       - name: Fix routes for GitHub Pages
         run: |
-          mkdir -p out
+          if [ ! -d "out" ]; then
+            echo "Creating out directory"
+            mkdir -p out
+          fi
+          
+          # Create .nojekyll file
           touch out/.nojekyll
+          
+          # Check if we need to copy files from out/shop to out
           if [ -d "out/shop" ]; then
             echo "Copying contents from out/shop to out root"
             cp -r out/shop/* out/
-            echo "After copying:"
-            ls -la out
-          else
-            echo "No out/shop directory found, skipping copy"
           fi
-          echo "Creating custom 404 page if needed"
+          
+          # Create 404 page if needed
           if [ ! -f "out/404.html" ]; then
-            cp out/index.html out/404.html || echo "Could not create 404.html"
+            if [ -f "out/index.html" ]; then
+              cp out/index.html out/404.html
+              echo "Created 404.html from index.html"
+            else
+              echo "No index.html found, could not create 404.html"
+            fi
           fi
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3

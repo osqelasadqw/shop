@@ -1,11 +1,12 @@
 /** @type {import('next').NextConfig} */
 
 const nextConfig = {
-  output: 'export',
+  // უბრალოდ ჩვეულებრივი დეველოპმენტ ბილდი, სტატიკური ექსპორტის გარეშე
   basePath: '/shop',
   assetPrefix: '/shop/',
   trailingSlash: true,
   reactStrictMode: true,
+  
   images: {
     domains: [
       'firebasestorage.googleapis.com',
@@ -16,13 +17,7 @@ const nextConfig = {
     ],
     unoptimized: true,
   },
-  // დავამატოთ კონფიგურაცია ჰიდრაციის გაფრთხილებების უგულებელყოფისთვის
-  onDemandEntries: {
-    // პერიოდი, რომლის განმავლობაშიც კომპილირებული გვერდები რჩება მეხსიერებაში
-    maxInactiveAge: 25 * 1000,
-    // კომპილირებული გვერდების მაქსიმალური რაოდენობა მეხსიერებაში
-    pagesBufferLength: 2,
-  },
+  
   // webpack კონფიგურაცია
   webpack: (config, { dev, isServer }) => {
     // ჰიდრაციის გაფრთხილებების გამორთვა დეველოპერ რეჟიმში
