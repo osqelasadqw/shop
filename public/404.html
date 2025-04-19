@@ -6,9 +6,14 @@
     <script>
       // პროდუქტის გვერდების მართვა
       (function() {
+        // მივიღოთ საბაზისო გზა GitHub Pages-დან
+        const basePath = '/shop';
         const path = window.location.pathname;
+        console.log('მიმდინარე გზა:', path);
+        
         // შევამოწმოთ არის თუ არა მარშრუტი პროდუქტის გვერდისთვის
-        const productPattern = /\/shop\/product\/([^\/]+)\/?/;
+        // გამოსწორებული რეგულარული გამოსახულება, რომ სწორად ამოიცნოს პროდუქტის ID
+        const productPattern = /\/shop(?:\/shop)*\/product\/([^\/]+)\/?/;
         const match = path.match(productPattern);
         
         if (match && match[1]) {
@@ -19,9 +24,18 @@
           // შევინახოთ პროდუქტის ID localStorage-ში
           localStorage.setItem('currentProductId', productId);
           
-          // URL მისამართის განსაზღვრა
-          const redirectUrl = `/shop/shop/product/${productId}/`;
+          // სწორი URL - დავრწმუნდეთ რომ არ იქნება ორმაგი shop
+          const redirectUrl = basePath + '/shop/product/' + productId + '/';
+          
+          // გავლოგოთ გადამისამართების URL
           console.log('გადამისამართდება:', redirectUrl);
+          
+          // გადავამოწმოთ, ხომ არ ვაგზავნით იმავე მისამართზე
+          if (path === redirectUrl) {
+            console.log('თავიდან ავიცილოთ ლუპი, გადავდივართ მთავარ გვერდზე');
+            window.location.href = basePath + '/';
+            return;
+          }
           
           // გადამისამართება
           window.location.href = redirectUrl;
@@ -29,7 +43,7 @@
         }
         
         // თუ არ არის პროდუქტის გვერდი, გადავამისამართოთ მთავარ გვერდზე
-        window.location.href = '/shop/';
+        window.location.href = basePath + '/';
       })();
     </script>
     <meta http-equiv="refresh" content="2;url=/shop/" />

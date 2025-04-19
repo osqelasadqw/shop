@@ -37,8 +37,8 @@ export function ProductCard({ product, loading = false, specialBadge = false, is
       localStorage.setItem('currentProductId', product.id);
       console.log('პროდუქტის ID შენახულია:', product.id);
       
-      // გადავიდეთ პროდუქტის გვერდზე პირდაპირ
-      window.location.href = `${window.location.origin}/shop/shop/product/${product.id}/`;
+      // გადავიდეთ პროდუქტის გვერდზე პირდაპირ - გამოვასწოროთ URL რომ არ მოხდეს ორმაგი shop
+      window.location.href = `${window.location.origin}/shop/product/${product.id}/`;
     }
   };
 
