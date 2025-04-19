@@ -45,7 +45,7 @@ import { Label } from "@/components/ui/label";
 // import { Pagination as UIPagination } from '@/components/ui/pagination';
 // import { Checkbox } from "@/components/ui/checkbox";
 
-type SortOption = 'newest' | 'oldest' | 'price-asc' | 'price-desc';
+type SortOption = 'newest' | 'oldest' | 'price-asc' | 'price-desc' | 'name-asc' | 'name-desc';
 
 interface ShopPageProps {
   initialProducts: Product[];
@@ -150,13 +150,16 @@ export default function ShopPage() {
           return (a.price || 0) - (b.price || 0);
         case 'price-desc':
           return (b.price || 0) - (a.price || 0);
+        case 'name-asc':
+          return a.name.localeCompare(b.name);
+        case 'name-desc':
+          return b.name.localeCompare(a.name);
         default:
           return 0;
       }
     });
     
   const specialProducts = allFilteredProducts.filter(product => Boolean((product as any).isSpecial));
-  
   const filteredProducts = allFilteredProducts.filter(product => !Boolean((product as any).isSpecial));
   
   const allProductsForSmallScreens = [...allFilteredProducts];
@@ -297,6 +300,8 @@ export default function ShopPage() {
                         <SelectItem value="oldest">უძველესი</SelectItem>
                         <SelectItem value="price-asc">ფასი: დაბლიდან მაღლა</SelectItem>
                         <SelectItem value="price-desc">ფასი: მაღლიდან დაბლა</SelectItem>
+                        <SelectItem value="name-asc">სახელი: დაბლიდან მაღლა</SelectItem>
+                        <SelectItem value="name-desc">სახელი: მაღლიდან დაბლა</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -389,6 +394,8 @@ export default function ShopPage() {
                       <SelectItem value="oldest">უძველესი</SelectItem>
                       <SelectItem value="price-asc">ფასი: დაბლიდან მაღლა</SelectItem>
                       <SelectItem value="price-desc">ფასი: მაღლიდან დაბლა</SelectItem>
+                      <SelectItem value="name-asc">სახელი: დაბლიდან მაღლა</SelectItem>
+                      <SelectItem value="name-desc">სახელი: მაღლიდან დაბლა</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
