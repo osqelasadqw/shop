@@ -2,7 +2,7 @@
 <html>
   <head>
     <meta charset="utf-8">
-    <title>გადამისამართება...</title>
+    <title>გადამისამართება</title>
     <style>
       body {
         font-family: Arial, sans-serif;
@@ -44,38 +44,32 @@
       }
     </style>
     <script>
-      // ეს სკრიპტი დაეხმარება სინგლ-ფეიჯ აპლიკაციას გაუმკლავდეს გადამისამართებას GitHub Pages-ზე
-      setTimeout(function() {
-        (function() {
-          // გადამისამართების URL-ის შექმნა
-          var basePath = '/shop';
-          var l = window.location;
-          var host = l.protocol + '//' + l.hostname + (l.port ? ':' + l.port : '');
+      // მყისიერი გადამისამართება 404 შეცდომისთვის
+      (function() {
+        var basePath = '/shop';
+        var l = window.location;
+        var host = l.protocol + '//' + l.hostname + (l.port ? ':' + l.port : '');
+        
+        // მთავარი გვერდიდან პირდაპირ /shop-ზე
+        if (l.pathname === '/' || l.pathname === '/index.html') {
+          window.location.replace(host + basePath + '/');
+          return;
+        }
+        
+        // სხვა გვერდებიდან
+        var pathWithoutBase = l.pathname;
+        if (!pathWithoutBase.startsWith(basePath)) {
+          // მცდელობა გავიგოთ არსებობს თუ არა შესაბამისი რესურსი /shop პრეფიქსით
+          var segments = pathWithoutBase.split('/').filter(function(s) { return s.length > 0; });
+          var redirectUrl = basePath + '/' + segments.join('/') + (l.search || '') + (l.hash || '');
           
-          // გადავამისამართოთ მთავარი დომეინიდან /shop-ზე
-          if (l.pathname === '/' || l.pathname === '/index.html') {
-            window.location.href = host + basePath + '/';
-            return;
-          }
-          
-          // დანარჩენი URL-ებისთვის, შევინახოთ მათი მისამართი
-          var pathWithoutBase = l.pathname;
-          if (!pathWithoutBase.startsWith(basePath)) {
-            // თუ მისამართი არ იწყება /shop-ით, დავამატოთ ეს პრეფიქსი
-            var segments = pathWithoutBase.split('/').filter(function(s) { return s.length > 0; });
-            var redirectUrl = basePath + '/' + segments.join('/') + (l.search || '') + (l.hash || '');
-            
-            // შევინახოთ გადამისამართების URL სესიაში
-            sessionStorage.setItem('redirectUrl', redirectUrl);
-            
-            // გადავამისამართოთ ინდექს გვერდზე
-            window.location.href = host + basePath + '/';
-          } else {
-            // თუ უკვე /shop-ით იწყება, უბრალოდ გადავამისამართოთ მთავარ shop გვერდზე
-            window.location.href = host + basePath + '/';
-          }
-        })();
-      }, 1500); // 1.5 წამიანი დაყოვნება
+          // შევინახოთ გადამისამართების URL სესიაში
+          sessionStorage.setItem('redirectUrl', redirectUrl);
+        }
+        
+        // ყველა შემთხვევაში დავაბრუნოთ მთავარ გვერდზე
+        window.location.replace(host + basePath + '/');
+      })();
     </script>
   </head>
   <body>
