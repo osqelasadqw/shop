@@ -97,7 +97,8 @@ jobs:
           fi
           
           # მთავარი index.html ფაილის კოპირება
-          echo '<!DOCTYPE html>
+          cat > out/index.html << 'EOL'
+<!DOCTYPE html>
 <html>
   <head>
     <meta charset="utf-8">
@@ -111,7 +112,8 @@ jobs:
   <body>
     <!-- ცარიელი გვერდი, რადგან უნდა მოხდეს მყისიერი გადამისამართება -->
   </body>
-</html>' > out/index.html
+</html>
+EOL
           echo "Created redirect index.html in root directory"
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
