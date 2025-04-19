@@ -2,8 +2,9 @@
 
 const nextConfig = {
   // სტატიკური ექსპორტის ჩართვა GitHub Pages-ისთვის
-  // დეველოპმენტისთვის დროებით გამორთულია
-  // output: "export", 
+  output: "export", 
+  // განვსაზღვროთ საიტის ბილდის დირექტორია
+  distDir: 'out',
   
   basePath: '',
   assetPrefix: '',

@@ -70,7 +70,22 @@ jobs:
       - name: Build with Next.js
         run: npm run build
       - name: Create .nojekyll file
-        run: touch out/.nojekyll
+        run: |
+          # შევამოწმოთ out დირექტორია არსებობს თუ არა
+          if [ ! -d "out" ]; then
+            echo "Creating out directory as it doesn't exist"
+            mkdir -p out
+          fi
+          # შევქმნათ .nojekyll ფაილი
+          touch out/.nojekyll
+          # შევამოწმოთ ფაილი შეიქმნა თუ არა
+          if [ -f "out/.nojekyll" ]; then
+            echo ".nojekyll file created successfully"
+          else
+            echo "Error: Failed to create .nojekyll file"
+            ls -la out/
+            exit 1
+          fi
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
