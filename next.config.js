@@ -1,21 +1,38 @@
 /** @type {import('next').NextConfig} */
+
 const nextConfig = {
+  // უბრალოდ ჩვეულებრივი დეველოპმენტ ბილდი, სტატიკური ექსპორტის გარეშე
   basePath: '/shop',
+  assetPrefix: '/shop/',
+  trailingSlash: true,
+  reactStrictMode: true,
+  
+  images: {
+    domains: [
+      'firebasestorage.googleapis.com',
+      'via.placeholder.com',
+      'lh3.googleusercontent.com',
+      'placehold.co',
+      'cdn-icons-png.flaticon.com',
+    ],
+    unoptimized: true,
+  },
+  
+  // webpack კონფიგურაცია
+  webpack: (config, { dev, isServer }) => {
+    // ჰიდრაციის გაფრთხილებების გამორთვა დეველოპერ რეჟიმში
+    if (dev && !isServer) {
+      config.optimization.moduleIds = 'named';
+    }
+    return config;
+  },
   typescript: {
-    // ჩავთიშოთ typescript შემოწმება ბილდის დროს
-    // იგნორირებული იქნება შეცდომები ტიპებთან დაკავშირებით
+    // ავარიდოთ ტიპსკრიპტს შეცდომის გამოტანა ბილდის დროს
     ignoreBuildErrors: true,
   },
   eslint: {
-    // ჩავთიშოთ eslint შემოწმება ბილდის დროს
+    // ავარიდოთ eslint-ს შეცდომის გამოტანა ბილდის დროს
     ignoreDuringBuilds: true,
-  },
-  images: {
-    domains: ['cdn-icons-png.flaticon.com', 'firebasestorage.googleapis.com', 'placehold.co', 'lh3.googleusercontent.com'],
-    deviceSizes: [640, 750, 828, 1080, 1200, 1920],
-    imageSizes: [16, 32, 48, 64, 96, 128, 256],
-    minimumCacheTTL: 60,
-    unoptimized: true,
   },
 };
 
