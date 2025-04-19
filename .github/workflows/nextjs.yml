@@ -103,9 +103,26 @@ jobs:
           echo "  <head>" >> out/index.html
           echo "    <meta charset=\"utf-8\">" >> out/index.html
           echo "    <title>OnLyne Shop</title>" >> out/index.html
-          echo "    <meta http-equiv=\"refresh\" content=\"0;url=/shop/\" />" >> out/index.html
+          echo "    <script>" >> out/index.html
+          echo "      // ვამოწმებთ თუ უკვე ვართ /shop გვერდზე" >> out/index.html
+          echo "      var isInShop = window.location.pathname.indexOf('/shop') === 0;" >> out/index.html
+          echo "      " >> out/index.html
+          echo "      // თუ არ ვართ /shop-ზე, მხოლოდ მაშინ ვაკეთებთ გადამისამართებას" >> out/index.html
+          echo "      if (!isInShop) {" >> out/index.html
+          echo "        var l = window.location;" >> out/index.html
+          echo "        var host = l.protocol + '//' + l.hostname + (l.port ? ':' + l.port : '');" >> out/index.html
+          echo "        var shopUrl = host + '/shop/';" >> out/index.html
+          echo "        window.location.href = shopUrl;" >> out/index.html
+          echo "      }" >> out/index.html
+          echo "    </script>" >> out/index.html
           echo "  </head>" >> out/index.html
-          echo "  <body></body>" >> out/index.html
+          echo "  <body>" >> out/index.html
+          echo "    <div style=\"text-align: center; padding: 20px;\">" >> out/index.html
+          echo "      <h1>გადამისამართება...</h1>" >> out/index.html
+          echo "      <p>გთხოვთ, დააჭიროთ ქვემოთ მოცემულ ბმულს თუ ავტომატურად არ გადახვედით:</p>" >> out/index.html
+          echo "      <p><a href=\"/shop/\" style=\"color: #0066cc; font-weight: bold;\">მაღაზიაზე გადასვლა</a></p>" >> out/index.html
+          echo "    </div>" >> out/index.html
+          echo "  </body>" >> out/index.html
           echo "</html>" >> out/index.html
           echo "Created redirect index.html in root directory"
       - name: Upload artifact

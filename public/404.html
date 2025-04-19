@@ -3,83 +3,52 @@
   <head>
     <meta charset="utf-8">
     <title>გადამისამართება</title>
+    <script>
+      // ვამოწმებთ თუ უკვე ვართ shop გვერდზე
+      var isInShop = window.location.pathname.indexOf('/shop') === 0;
+      
+      // თუ უკვე ვართ shop-ში, არ ვაკეთებთ გადამისამართებას
+      if (!isInShop) {
+        var l = window.location;
+        var host = l.protocol + '//' + l.hostname + (l.port ? ':' + l.port : '');
+        var shopUrl = host + '/shop/';
+        
+        // აქ ვიყენებთ დროულ ფუნქციას რომ თავიდან ავიცილოთ უსასრულო ციკლი
+        setTimeout(function() {
+          window.location.href = shopUrl;
+        }, 100);
+      }
+    </script>
     <style>
       body {
         font-family: Arial, sans-serif;
         text-align: center;
         margin: 0;
-        padding: 0;
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        height: 100vh;
-        background-color: #f5f5f5;
+        padding: 2rem;
       }
       .container {
         max-width: 600px;
-        padding: 30px;
-        background-color: white;
-        border-radius: 10px;
-        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        margin: 0 auto;
       }
       h1 {
         color: #333;
-        margin-bottom: 20px;
-      }
-      p {
-        margin-bottom: 30px;
-        color: #666;
+        margin: 1rem 0;
       }
       a {
-        display: inline-block;
-        padding: 10px 20px;
-        background-color: #4a90e2;
-        color: white;
+        color: #0066cc;
         text-decoration: none;
-        border-radius: 5px;
         font-weight: bold;
       }
       a:hover {
-        background-color: #3a80d2;
+        text-decoration: underline;
       }
     </style>
-    <script>
-      // მყისიერი გადამისამართება 404 შეცდომისთვის
-      (function() {
-        var basePath = '/shop';
-        var l = window.location;
-        var host = l.protocol + '//' + l.hostname + (l.port ? ':' + l.port : '');
-        
-        // მთავარი გვერდიდან პირდაპირ /shop-ზე
-        if (l.pathname === '/' || l.pathname === '/index.html') {
-          window.location.replace(host + basePath + '/');
-          return;
-        }
-        
-        // სხვა გვერდებიდან
-        var pathWithoutBase = l.pathname;
-        if (!pathWithoutBase.startsWith(basePath)) {
-          // მცდელობა გავიგოთ არსებობს თუ არა შესაბამისი რესურსი /shop პრეფიქსით
-          var segments = pathWithoutBase.split('/').filter(function(s) { return s.length > 0; });
-          var redirectUrl = basePath + '/' + segments.join('/') + (l.search || '') + (l.hash || '');
-          
-          // შევინახოთ გადამისამართების URL სესიაში
-          sessionStorage.setItem('redirectUrl', redirectUrl);
-        }
-        
-        // ყველა შემთხვევაში დავაბრუნოთ მთავარ გვერდზე
-        window.location.replace(host + basePath + '/');
-      })();
-    </script>
   </head>
   <body>
     <div class="container">
       <h1>გვერდი ვერ მოიძებნა</h1>
-      <p>თქვენ ავტომატურად გადამისამართდებით მთავარ გვერდზე მალე.<br>თუ ავტომატური გადამისამართება არ მუშაობს, დააჭირეთ ქვემოთ მოცემულ ღილაკს:</p>
-      <a id="redirect-link" href="/shop/">მაღაზიაზე გადასვლა</a>
+      <p>გთხოვთ, დააჭიროთ ქვემოთ მოცემულ ბმულს:</p>
+      <p><a href="/shop/">მაღაზიაზე გადასვლა</a></p>
     </div>
-    <script>
-      document.getElementById('redirect-link').href = '/shop/';
-    </script>
   </body>
 </html> 
