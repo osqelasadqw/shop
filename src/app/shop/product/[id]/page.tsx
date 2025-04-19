@@ -1,9 +1,7 @@
-'use client';
-
 import React, { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { ShopLayout } from '@/components/layouts/shop-layout';
-import { getProductById, getProductsByCategory } from '@/lib/firebase-service';
+import { getProductById, getProductsByCategory, getAllProducts } from '@/lib/firebase-service';
 import { Product } from '@/types';
 import { Button } from '@/components/ui/button';
 import { useCart } from '@/components/providers/cart-provider';
@@ -18,6 +16,19 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+
+// სერვერის მხარის ფუნქცია generateStaticParams-ისთვის
+export async function generateStaticParams() {
+  try {
+    const products = await getAllProducts();
+    return products.map(product => ({
+      id: product.id,
+    }));
+  } catch (error) {
+    console.error('Error generating static params for product pages:', error);
+    return [];
+  }
+}
 
 // ZoomedImageModal კომპონენტი გადავიტანოთ ცალკე კომპონენტში
 const ZoomedImageModal = ({ 

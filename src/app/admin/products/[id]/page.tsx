@@ -1,8 +1,6 @@
-'use client';
-
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { getProductById, updateProduct, markProductAsSpecial } from '@/lib/firebase-service';
+import { getProductById, updateProduct, markProductAsSpecial, getAllProducts } from '@/lib/firebase-service';
 import { Product } from '@/types';
 import { AdminLayout } from '@/components/layouts/admin-layout';
 import { Button } from '@/components/ui/button';
@@ -19,6 +17,21 @@ import {
 } from '@/components/ui/card';
 import { Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
+
+// სერვერის მხარის ფუნქცია generateStaticParams-ისთვის
+export async function generateStaticParams() {
+  try {
+    const products = await getAllProducts();
+    return products.map(product => ({
+      id: product.id,
+    }));
+  } catch (error) {
+    console.error('Error generating static params for product pages:', error);
+    return [];
+  }
+}
+
+'use client';
 
 export default function ProductEditPage({ params }: { params: { id: string } }) {
   const router = useRouter();
