@@ -4,87 +4,42 @@
     <meta charset="utf-8">
     <title>გვერდი ვერ მოიძებნა</title>
     <script>
-      // პროდუქტის გვერდების მართვა
+      // ძალიან გამარტივებული 404 ლოგიკა GitHub Pages SPA-სთვის
       (function() {
-        try {
-          // მივიღოთ საბაზისო გზა GitHub Pages-დან
-          const basePath = '/shop';
-          const origin = window.location.origin;
-          const path = window.location.pathname;
-          console.log('მიმდინარე გზა:', path);
-          
-          // შევამოწმოთ არის თუ არა მარშრუტი პროდუქტის გვერდისთვის
-          // გამოსწორებული რეგულარული გამოსახულება, რომ სწორად ამოიცნოს პროდუქტის ID
-          const productPattern = /\/shop(?:\/shop)*\/product\/([^\/]+)\/?/;
+        const path = window.location.pathname;
+        const basePath = '/shop';
+        const origin = window.location.origin;
+        
+        // შევამოწმოთ, თუ პირდაპირ პროდუქტის გვერდზე ვართ შესული
+        // და მისამართი სწორია (/shop/product/...), არაფერი არ ვქნათ.
+        // Next.js-ის როუტერი თავად მოაგვარებს.
+        const productPattern = /^\/shop\/product\/[^\/]+\/?$/;
+        if (productPattern.test(path)) {
+          console.log('404: სწორი პროდუქტის გვერდის მისამართია, არ ვამისამართებთ.');
+          // სურვილისამებრ, შეგვიძლია localStorage-ში ID შევინახოთ, თუ კლიენტი ამას ელოდება
           const match = path.match(productPattern);
-          
           if (match && match[1]) {
-            // პროდუქტის ID
-            const productId = match[1];
-            console.log('404 redirect: პროდუქტის ID:', productId);
-            
-            // შევინახოთ პროდუქტის ID localStorage-ში
-            localStorage.setItem('currentProductId', productId);
-            
-            // სწორი URL - სრული მისამართით
-            const redirectUrl = origin + basePath + '/product/' + productId + '/';
-            
-            // გავლოგოთ გადამისამართების URL
-            console.log('გადამისამართდება:', redirectUrl);
-            
-            // გადავამოწმოთ, ხომ არ ვაგზავნით იმავე მისამართზე
-            if (window.location.href === redirectUrl) {
-              console.log('თავიდან ავიცილოთ ლუპი, გადავდივართ მთავარ გვერდზე');
-              window.location.href = origin + basePath + '/';
-              return;
-            }
-            
-            // გადამისამართება
-            window.location.href = redirectUrl;
-            return;
+             localStorage.setItem('currentProductId', match[1]);
           }
-          
-          // თუ არ არის პროდუქტის გვერდი, გადავამისამართოთ მთავარ გვერდზე
-          window.location.href = origin + basePath + '/';
-        } catch (error) {
-          console.error('შეცდომა გადამისამართებისას:', error);
-          // შეცდომის შემთხვევაშიც გადავამისამართოთ მთავარ გვერდზე
-          window.location.href = window.location.origin + '/shop/';
+          return; // გავაჩეროთ სკრიპტი
         }
+        
+        // თუ მისამართი არასწორია, გადავამისამართოთ მთავარ /shop/ გვერდზე.
+        // იქიდან Next.js როუტერი გააგრძელებს მუშაობას.
+        console.log('404: არასწორი მისამართი, გადამისამართება /shop/-ზე:', path);
+        window.location.replace(origin + basePath + '/');
       })();
     </script>
-    <meta http-equiv="refresh" content="2;url=/shop/" />
+    <!-- მეტა განახლება წავშალოთ ან დავაკომენტაროთ, რადგან სკრიპტი აკეთებს გადამისამართებას -->
+    <!-- <meta http-equiv="refresh" content="0;url=/shop/" /> -->
     <style>
-      body {
-        font-family: Arial, sans-serif;
-        text-align: center;
-        margin: 0;
-        padding: 2rem;
-      }
-      .container {
-        max-width: 600px;
-        margin: 0 auto;
-      }
-      h1 {
-        color: #333;
-        margin: 1rem 0;
-      }
-      a {
-        color: #0066cc;
-        text-decoration: none;
-        font-weight: bold;
-      }
-      a:hover {
-        text-decoration: underline;
-      }
+      body { font-family: Arial, sans-serif; text-align: center; margin-top: 50px; }
+      a { color: #0066cc; }
     </style>
   </head>
   <body>
-    <div class="container">
-      <h1>გვერდი ვერ მოიძებნა</h1>
-      <p>გადამისამართება მიმდინარეობს...</p>
-      <p>თუ ავტომატურად არ გადამისამართდა, გთხოვთ, დააჭიროთ ქვემოთ მოცემულ ბმულს:</p>
-      <p><a href="/shop/">მაღაზიაზე გადასვლა</a></p>
-    </div>
+    <h1>გვერდი ვერ მოიძებნა</h1>
+    <p>გადამისამართება მიმდინარეობს...</p>
+    <p>თუ ავტომატურად არ გადამისამართდა, გთხოვთ, დააჭიროთ <a href="/shop/">აქ</a>.</p>
   </body>
 </html> 
