@@ -18,49 +18,57 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
+      - name: Checkout repository
         uses: actions/checkout@v4
-      - name: Setup Node
+      - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: "20"
           cache: 'npm'
-      - name: Setup Pages
+      - name: Setup GitHub Pages
         uses: actions/configure-pages@v4
         with:
           static_site_generator: next
       - name: Install dependencies
         run: npm install --legacy-peer-deps
-      - name: Fix dynamic routes for static export
+      - name: Prepare static routes
         run: |
-          echo "Adding generateStaticParams to dynamic routes for static export"
+          echo "Preparing static routes for build..."
           
-          # ადმინის პროდუქტების რედაქტირების გვერდი
+          # ადმინის გვერდები
           if [ -d "src/app/admin/products/edit/[id]" ]; then
             echo 'export default function Page() { return null; }' > src/app/admin/products/edit/[id]/page.tsx
             echo 'export function generateStaticParams() { return [{id: "placeholder"}]; }' >> src/app/admin/products/edit/[id]/page.tsx
-            echo "Fixed admin/products/edit/[id] dynamic route"
+            echo "✅ Fixed admin/products/edit/[id] dynamic route"
           fi
           
-          # ადმინის პროდუქტების ნახვის გვერდი
           if [ -d "src/app/admin/products/[id]" ]; then
             echo 'export default function Page() { return null; }' > src/app/admin/products/[id]/page.tsx
             echo 'export function generateStaticParams() { return [{id: "placeholder"}]; }' >> src/app/admin/products/[id]/page.tsx
-            echo "Fixed admin/products/[id] dynamic route"
+            echo "✅ Fixed admin/products/[id] dynamic route"
           fi
           
-          # მაღაზიის პროდუქტის დეტალების გვერდი
+          # პროდუქტის გვერდი - ფიქსირებული ID-ებით
+          # ვამოწმებთ თუ არსებობს უკვე generateStaticParams ფუნქცია
           if [ -d "src/app/shop/product/[id]" ]; then
-            # შევამოწმოთ არსებობს თუ არა უკვე generateStaticParams ფუნქცია
             if ! grep -q "generateStaticParams" src/app/shop/product/[id]/page.tsx; then
-              echo 'import { getAllProducts } from "@/lib/firebase-service";' > src/app/shop/product/[id]/page.temp
-              cat src/app/shop/product/[id]/page.tsx >> src/app/shop/product/[id]/page.temp
-              
-              # დავამატოთ generateStaticParams ფუნქცია
-              echo '
-// ინფორმაცია სტატიკური საიტის გენერაციისთვის
-export async function generateStaticParams() {
-  // დავაბრუნოთ ფიქსირებული პროდუქტის ID-ები, რადგან ბილდის დროს Firebase-ს ვერ მივწვდებით
+              echo "ℹ️ Adding generateStaticParams to product detail page"
+              # დროებით ფაილში შევინახოთ მოდიფიცირებული შიგთავსი
+              cat > src/app/shop/product/[id]/page.temp << 'EOF'
+import { getProductById } from '@/lib/firebase-service';
+import { cache } from 'react';
+import ProductDetailClient from './client';
+
+// გადავაკეშოთ შედეგი რომ არ მოხდეს მრავალჯერადი მოთხოვნა
+const getProduct = cache(async (id: string) => {
+  return await getProductById(id);
+});
+
+// დინამიური პარამეტრები
+export const dynamicParams = true;
+
+// ფიქსირებული პროდუქტების ID-ები სტატიკური გვერდებისთვის
+export function generateStaticParams() {
   return [
     { id: "rkVZ1tYjku6SSjRXLIpw" },
     { id: "K3J3kfOcvW4Q32O6PsQO" },
@@ -74,21 +82,34 @@ export async function generateStaticParams() {
     { id: "0s6osYbIE1RlQGgzi6ky" },
     { id: "fvSN8QZazRtek6avxE2z" },
     { id: "aqoKz04y5BdaYVfAjR6M" },
-    { id: "placeholder" },
+    { id: "placeholder" }
   ];
-}' >> src/app/shop/product/[id]/page.temp
-              
+}
+
+// სერვერის მხარეს default ფუნქცია
+export default function ProductDetailPage({ params }: { params: { id: string } }) {
+  // პარამეტრების მიღება მარშრუტიდან
+  const routeId = params.id;
+  
+  // კლიენტის კომპონენტის დაბრუნება ID-ის გადაცემით
+  return <ProductDetailClient id={routeId} />;
+}
+EOF
+              # ჩავანაცვლოთ ორიგინალი ფაილი
               mv src/app/shop/product/[id]/page.temp src/app/shop/product/[id]/page.tsx
-              echo "Added static generateStaticParams to shop/product/[id] dynamic route"
+              echo "✅ Added generateStaticParams to product page"
             else
-              echo "generateStaticParams already exists in shop/product/[id]/page.tsx"
+              echo "✅ generateStaticParams already exists in product page"
             fi
           fi
       - name: Create .nojekyll file
-        run: touch ./out/.nojekyll
-      - name: Build with Next.js
+        run: |
+          mkdir -p out
+          touch out/.nojekyll
+          echo "✅ Created .nojekyll file"
+      - name: Build application
         run: npm run build
-      - name: Upload artifact
+      - name: Upload artifact to GitHub Pages
         uses: actions/upload-pages-artifact@v3
         with:
           path: ./out
