@@ -9,6 +9,7 @@
         try {
           // მივიღოთ საბაზისო გზა GitHub Pages-დან
           const basePath = '/shop';
+          const origin = window.location.origin;
           const path = window.location.pathname;
           console.log('მიმდინარე გზა:', path);
           
@@ -25,16 +26,16 @@
             // შევინახოთ პროდუქტის ID localStorage-ში
             localStorage.setItem('currentProductId', productId);
             
-            // სწორი URL - დავრწმუნდეთ რომ არ იქნება ორმაგი shop
-            const redirectUrl = basePath + '/product/' + productId + '/';
+            // სწორი URL - სრული მისამართით
+            const redirectUrl = origin + basePath + '/product/' + productId + '/';
             
             // გავლოგოთ გადამისამართების URL
             console.log('გადამისამართდება:', redirectUrl);
             
             // გადავამოწმოთ, ხომ არ ვაგზავნით იმავე მისამართზე
-            if (path === redirectUrl) {
+            if (window.location.href === redirectUrl) {
               console.log('თავიდან ავიცილოთ ლუპი, გადავდივართ მთავარ გვერდზე');
-              window.location.href = basePath + '/';
+              window.location.href = origin + basePath + '/';
               return;
             }
             
@@ -44,11 +45,11 @@
           }
           
           // თუ არ არის პროდუქტის გვერდი, გადავამისამართოთ მთავარ გვერდზე
-          window.location.href = basePath + '/';
+          window.location.href = origin + basePath + '/';
         } catch (error) {
           console.error('შეცდომა გადამისამართებისას:', error);
           // შეცდომის შემთხვევაშიც გადავამისამართოთ მთავარ გვერდზე
-          window.location.href = '/shop/';
+          window.location.href = window.location.origin + '/shop/';
         }
       })();
     </script>
