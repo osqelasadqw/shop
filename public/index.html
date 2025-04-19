@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <title>OnLyne Shop</title>
+    <script>
+      // 404.html-დან გადამისამართებული URL-ის დამუშავება
+      (function(){
+        var redirect = sessionStorage.redirect;
+        delete sessionStorage.redirect;
+        if (redirect && redirect != location.href) {
+          history.replaceState(null, null, redirect);
+        }
+      })();
+    </script>
+    <!-- მეტა ტეგები -->
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+  </head>
+  <body>
+    <div id="root"></div>
+    <!-- კონტენტი ჩაიტვირთება React-ით -->
+  </body>
+</html> 
