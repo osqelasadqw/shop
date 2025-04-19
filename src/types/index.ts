@@ -40,8 +40,8 @@ export interface PromoCode {
   productId: string;
   discountPercentage: number;
   active: boolean;
-  createdAt: any;
-  updatedAt: any;
+  createdAt: number;
+  updatedAt: number;
 }
 
 export interface Discount {
