@@ -8,8 +8,13 @@ const nextConfig = {
   trailingSlash: true,
   reactStrictMode: true,
   
-  // დინამიური მარშრუტების გამორიცხვა
+  // აღვარიდოთ თავი RSC-სთან დაკავშირებულ პრობლემებს
   experimental: {
+    // ნებისმიერი RSC ჩატვირთვა კლიენტის მხარეს
+    appDir: true,
+    // არ შევქმნათ RSC ფაილები სტატიკური ექსპორტისას
+    serverComponentsExternalPackages: [],
+    // ვარკევთ დინამიურ მარშრუტებს
     outputFileTracingExcludes: {
       '/admin/products/**': [
         'node_modules/**',

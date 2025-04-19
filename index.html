@@ -4,6 +4,20 @@
     <meta charset="utf-8">
     <title>OnLyne Shop</title>
     <meta http-equiv="refresh" content="0;url=/" />
+    <script>
+      // სერვისვორკერის რეგისტრაცია RSC შეცდომების გასაუმჯობესებლად
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', function() {
+          navigator.serviceWorker.register('/sw.js')
+            .then(function(registration) {
+              console.log('ServiceWorker registration successful with scope: ', registration.scope);
+            })
+            .catch(function(error) {
+              console.log('ServiceWorker registration failed: ', error);
+            });
+        });
+      }
+    </script>
   </head>
   <body>
     <h1>მაღაზია იტვირთება...</h1>

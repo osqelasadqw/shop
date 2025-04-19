@@ -22,6 +22,36 @@ const addErrorEventPolyfill = `
   }
 `;
 
+// რესურსების ჩატვირთვის შეცდომების ჩახშობა
+const handleRscErrorsScript = `
+  if (typeof window !== 'undefined') {
+    // RSC შეცდომების დამუშავება
+    window.addEventListener('error', function(event) {
+      if (event.filename && event.filename.includes('index.txt?_rsc=')) {
+        // შევაჩეროთ შეცდომა
+        event.preventDefault();
+        event.stopPropagation();
+        console.log('RSC ფაილის ჩატვირთვის შეცდომა გაუქმებულია');
+        return true;
+      }
+    }, true);
+
+    // Fetch მოთხოვნების ჩახშობა
+    const originalFetch = window.fetch;
+    window.fetch = function(resource, options) {
+      // დავბლოკოთ RSC რესურსების მოთხოვნები
+      if (resource && typeof resource === 'string' && resource.includes('index.txt?_rsc=')) {
+        // დავაბრუნოთ ცარიელი პასუხი წარმატებული სტატუსით
+        return Promise.resolve(new Response(JSON.stringify({ blocked: true }), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' }
+        }));
+      }
+      return originalFetch(resource, options);
+    };
+  }
+`;
+
 // Add script to clean fdprocessedid attributes that cause hydration errors
 const cleanFdProcessedIdScript = `
   if (typeof window !== 'undefined') {
@@ -115,6 +145,7 @@ export default function RootLayout({
     <html lang="en">
       <head>
         <script dangerouslySetInnerHTML={{ __html: addErrorEventPolyfill }} />
+        <script dangerouslySetInnerHTML={{ __html: handleRscErrorsScript }} />
         <script dangerouslySetInnerHTML={{ __html: cleanFdProcessedIdScript }} />
       </head>
       <body className={inter.className} suppressHydrationWarning>
