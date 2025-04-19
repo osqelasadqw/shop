@@ -2,22 +2,11 @@
 <html>
   <head>
     <meta charset="utf-8">
-    <title>გადამისამართება</title>
+    <title>გვერდი ვერ მოიძებნა</title>
     <script>
-      // ვამოწმებთ თუ უკვე ვართ shop გვერდზე
-      var isInShop = window.location.pathname.indexOf('/shop') === 0;
-      
-      // თუ უკვე ვართ shop-ში, არ ვაკეთებთ გადამისამართებას
-      if (!isInShop) {
-        var l = window.location;
-        var host = l.protocol + '//' + l.hostname + (l.port ? ':' + l.port : '');
-        var shopUrl = host + '/shop/';
-        
-        // აქ ვიყენებთ დროულ ფუნქციას რომ თავიდან ავიცილოთ უსასრულო ციკლი
-        setTimeout(function() {
-          window.location.href = shopUrl;
-        }, 100);
-      }
+      setTimeout(function() {
+        window.location.href = '/shop/';
+      }, 100);
     </script>
     <style>
       body {

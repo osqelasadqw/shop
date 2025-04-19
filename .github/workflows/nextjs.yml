@@ -62,14 +62,6 @@ jobs:
           done
       - name: Build with Next.js
         run: npm run build
-      - name: Debug output directory
-        run: |
-          echo "Output directory structure:"
-          ls -la
-          find . -name "out" -type d
-          if [ -d "out" ]; then
-            ls -la out
-          fi
       - name: Fix routes for GitHub Pages
         run: |
           if [ ! -d "out" ]; then
@@ -80,51 +72,32 @@ jobs:
           # Create .nojekyll file
           touch out/.nojekyll
           
-          # Check if we need to copy files from out/shop to out
-          if [ -d "out/shop" ]; then
-            echo "Copying contents from out/shop to out root"
-            cp -r out/shop/* out/
+          # Copy custom 404 page if it exists
+          if [ -f "public/404.html" ]; then
+            cp public/404.html out/404.html
+            echo "Copied custom 404.html to output"
           fi
           
-          # Create 404 page if needed
-          if [ ! -f "out/404.html" ]; then
-            if [ -f "out/index.html" ]; then
-              cp out/index.html out/404.html
-              echo "Created 404.html from index.html"
-            else
-              echo "No index.html found, could not create 404.html"
-            fi
+          # მარტივი index.html ფაილის შექმნა თუ არ არსებობს
+          if [ ! -f "out/index.html" ]; then
+            echo "<!DOCTYPE html>" > out/index.html
+            echo "<html>" >> out/index.html
+            echo "  <head>" >> out/index.html
+            echo "    <meta charset=\"utf-8\">" >> out/index.html
+            echo "    <title>OnLyne Shop</title>" >> out/index.html
+            echo "    <script>" >> out/index.html
+            echo "      window.location.href = '/shop/';" >> out/index.html
+            echo "    </script>" >> out/index.html
+            echo "  </head>" >> out/index.html
+            echo "  <body>" >> out/index.html
+            echo "    <div style=\"text-align: center; padding: 20px;\">" >> out/index.html
+            echo "      <h1>გადამისამართება...</h1>" >> out/index.html
+            echo "      <p><a href=\"/shop/\">მაღაზიაზე გადასვლა</a></p>" >> out/index.html
+            echo "    </div>" >> out/index.html
+            echo "  </body>" >> out/index.html
+            echo "</html>" >> out/index.html
+            echo "Created simple redirect index.html in root directory"
           fi
-          
-          # მარტივი index.html ფაილის შექმნა სტრიქონ-სტრიქონ
-          touch out/index.html
-          echo "<!DOCTYPE html>" > out/index.html
-          echo "<html>" >> out/index.html
-          echo "  <head>" >> out/index.html
-          echo "    <meta charset=\"utf-8\">" >> out/index.html
-          echo "    <title>OnLyne Shop</title>" >> out/index.html
-          echo "    <script>" >> out/index.html
-          echo "      // ვამოწმებთ თუ უკვე ვართ /shop გვერდზე" >> out/index.html
-          echo "      var isInShop = window.location.pathname.indexOf('/shop') === 0;" >> out/index.html
-          echo "      " >> out/index.html
-          echo "      // თუ არ ვართ /shop-ზე, მხოლოდ მაშინ ვაკეთებთ გადამისამართებას" >> out/index.html
-          echo "      if (!isInShop) {" >> out/index.html
-          echo "        var l = window.location;" >> out/index.html
-          echo "        var host = l.protocol + '//' + l.hostname + (l.port ? ':' + l.port : '');" >> out/index.html
-          echo "        var shopUrl = host + '/shop/';" >> out/index.html
-          echo "        window.location.href = shopUrl;" >> out/index.html
-          echo "      }" >> out/index.html
-          echo "    </script>" >> out/index.html
-          echo "  </head>" >> out/index.html
-          echo "  <body>" >> out/index.html
-          echo "    <div style=\"text-align: center; padding: 20px;\">" >> out/index.html
-          echo "      <h1>გადამისამართება...</h1>" >> out/index.html
-          echo "      <p>გთხოვთ, დააჭიროთ ქვემოთ მოცემულ ბმულს თუ ავტომატურად არ გადახვედით:</p>" >> out/index.html
-          echo "      <p><a href=\"/shop/\" style=\"color: #0066cc; font-weight: bold;\">მაღაზიაზე გადასვლა</a></p>" >> out/index.html
-          echo "    </div>" >> out/index.html
-          echo "  </body>" >> out/index.html
-          echo "</html>" >> out/index.html
-          echo "Created redirect index.html in root directory"
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
