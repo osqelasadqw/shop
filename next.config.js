@@ -1,7 +1,7 @@
 /** @type {import('next').NextConfig} */
 
 const nextConfig = {
-  output: 'export',
+  // output: 'export', // მოვხსენით სტატიკური ექსპორტის რეჟიმი
   basePath: '/shop',
   assetPrefix: '/shop/',
   trailingSlash: true,
