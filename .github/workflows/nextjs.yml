@@ -96,24 +96,17 @@ jobs:
             fi
           fi
           
-          # მთავარი index.html ფაილის კოპირება
-          cat > out/index.html << 'EOL'
-<!DOCTYPE html>
-<html>
-  <head>
-    <meta charset="utf-8">
-    <title>OnLyne Shop</title>
-    <meta http-equiv="refresh" content="0;url=/shop/" />
-    <script>
-      // მყისიერი გადამისამართება shop-ზე
-      window.location.replace("/shop/");
-    </script>
-  </head>
-  <body>
-    <!-- ცარიელი გვერდი, რადგან უნდა მოხდეს მყისიერი გადამისამართება -->
-  </body>
-</html>
-EOL
+          # მარტივი index.html ფაილის შექმნა სტრიქონ-სტრიქონ
+          touch out/index.html
+          echo "<!DOCTYPE html>" > out/index.html
+          echo "<html>" >> out/index.html
+          echo "  <head>" >> out/index.html
+          echo "    <meta charset=\"utf-8\">" >> out/index.html
+          echo "    <title>OnLyne Shop</title>" >> out/index.html
+          echo "    <meta http-equiv=\"refresh\" content=\"0;url=/shop/\" />" >> out/index.html
+          echo "  </head>" >> out/index.html
+          echo "  <body></body>" >> out/index.html
+          echo "</html>" >> out/index.html
           echo "Created redirect index.html in root directory"
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
