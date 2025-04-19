@@ -11,12 +11,16 @@ const nextConfig = {
   trailingSlash: true,
   reactStrictMode: true,
   
+  // RSC ფაილებთან დაკავშირებული პრობლემების გადაჭრა
+  useFileSystemPublicRoutes: false,
+  optimizeFonts: false,
+  
   // აღვარიდოთ თავი RSC-სთან დაკავშირებულ პრობლემებს
   experimental: {
     // ნებისმიერი RSC ჩატვირთვა კლიენტის მხარეს
     appDir: true,
-    // დინამიური მარშრუტების ჩართვა (მხოლოდ დეველოპმენტისთვის)
-    dynamicParams: true,
+    // გამოვრთოთ RSC ფაილების გენერაცია სტატიკური ექსპორტისთვის
+    disableStaticImages: true,
     // არ შევქმნათ RSC ფაილები სტატიკური ექსპორტისას
     serverComponentsExternalPackages: [],
     // ვარკევთ დინამიურ მარშრუტებს
@@ -39,6 +43,7 @@ const nextConfig = {
       'cdn-icons-png.flaticon.com',
     ],
     unoptimized: true,
+    minimumCacheTTL: 60,
   },
   
   // webpack კონფიგურაცია
@@ -47,6 +52,13 @@ const nextConfig = {
     if (dev && !isServer) {
       config.optimization.moduleIds = 'named';
     }
+    
+    // წვდომის RSC ფაილების თავიდან არიდება GitHub Pages-ზე
+    if (!isServer) {
+      config.resolve.alias['next/dist/server/future/route-modules/app-page/module'] = 
+        require.resolve('./utils/app-page-module-shim.js');
+    }
+    
     return config;
   },
   typescript: {
