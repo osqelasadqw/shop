@@ -2,7 +2,9 @@
 
 const nextConfig = {
   // სტატიკური ექსპორტის ჩართვა GitHub Pages-ისთვის
-  output: "export",
+  // დეველოპმენტისთვის დროებით გამორთულია
+  // output: "export", 
+  
   basePath: '',
   assetPrefix: '',
   trailingSlash: true,
@@ -12,6 +14,8 @@ const nextConfig = {
   experimental: {
     // ნებისმიერი RSC ჩატვირთვა კლიენტის მხარეს
     appDir: true,
+    // დინამიური მარშრუტების ჩართვა (მხოლოდ დეველოპმენტისთვის)
+    dynamicParams: true,
     // არ შევქმნათ RSC ფაილები სტატიკური ექსპორტისას
     serverComponentsExternalPackages: [],
     // ვარკევთ დინამიურ მარშრუტებს

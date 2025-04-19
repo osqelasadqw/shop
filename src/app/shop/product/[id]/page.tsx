@@ -16,6 +16,8 @@ export async function generateStaticParams() {
     { id: 'CyPeQlm4lKBCy4p3IyPI' },
     // დაამატე აქ სხვა პროდუქტების ID-ები ხელით
     { id: 'Kz6AhKS52Cj3G4zCxINi' },
+    // ახალი დამატებული პროდუქტი
+    { id: 'rkVZ1tYjku6SSjRXLIpw' },
     // წინასწარი პარამეტრები დეველოპმენტისთვის - ეს ყველა პროდუქტი, რომელიც მუშაობს
     { id: 'product1' },
     { id: 'product2' },
@@ -27,8 +29,10 @@ export async function generateStaticParams() {
 
 // სერვერის მხარეს default ფუნქცია
 export default async function ProductDetailPage({ params }: { params: { id: string } }) {
-  // პროდუქტის ID-ის მიღება params-დან
-  const { id } = params;
+  // Next.js App Router-ში, ასინქრონულ კომპონენტებში params უნდა იყოს "await"-ი 
+  // სანამ მის თვისებებს გამოვიყენებთ
+  const resolvedParams = await Promise.resolve(params);
+  const id = resolvedParams.id;
   
   // კლიენტის კომპონენტის დაბრუნება ID-ის გადაცემით
   return <ProductDetailClient id={id} />;

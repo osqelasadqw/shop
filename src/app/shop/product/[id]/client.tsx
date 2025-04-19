@@ -22,6 +22,19 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 type SortOption = 'newest' | 'price-asc' | 'price-desc' | 'name-asc' | 'name-desc';
 
+// წინასწარი შემოტანა სურათის გადიდების კომპონენტისთვის, რომ არ მოხდეს დაყოვნება პირველ გახსნაზე
+const ZoomedImageModal = dynamic(() => import('@/components/modals/zoomed-image-modal').then(mod => mod.default), {
+  ssr: false,  // SSR გამორთვა რომ გაჭედვა არ მოხდეს
+  loading: () => (
+    <div className="fixed inset-0 backdrop-blur-sm bg-black bg-opacity-50 z-50 flex items-center justify-center">
+      <div className="bg-white rounded-lg p-4 shadow-xl flex flex-col items-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+        <p className="mt-2 text-gray-600">სურათი იტვირთება...</p>
+      </div>
+    </div>
+  )
+});
+
 export default function ProductDetailClient({ id }: { id: string }) {
   const [product, setProduct] = useState<Product | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -169,6 +182,14 @@ export default function ProductDetailClient({ id }: { id: string }) {
     }
     return sorted;
   }, [relatedProducts, relatedSortOption]);
+
+  // პრელოადი ძირითადი სურათის გადიდებისთვის
+  useEffect(() => {
+    if (product?.images && product.images.length > 0) {
+      // წინასწარი ჩატვირთვა პირველი სურათის მოდალისთვის
+      import('@/components/modals/zoomed-image-modal');
+    }
+  }, [product]);
 
   if (isLoading) {
     return (
@@ -433,68 +454,4 @@ export default function ProductDetailClient({ id }: { id: string }) {
       />}
     </ShopLayout>
   );
-}
-
-// Define the ZoomedImageModal component (or import if it's separate)
-const ZoomedImageModal = dynamic(() => Promise.resolve(({ 
-  currentImage, 
-  productName, 
-  hasMultipleImages, 
-  onClose, 
-  onPrev, 
-  onNext 
-}: {
-  currentImage: string;
-  productName: string;
-  hasMultipleImages: boolean;
-  onClose: () => void;
-  onPrev: () => void;
-  onNext: () => void;
-}) => {
-  return (
-    <div 
-      className="fixed inset-0 backdrop-blur-sm bg-black bg-opacity-50 z-50 flex items-center justify-center p-2 sm:p-4"
-      onClick={onClose}
-    >
-      <button 
-        className="absolute top-2 right-2 sm:top-4 sm:right-4 text-white bg-black bg-opacity-50 hover:bg-opacity-70 rounded-full p-2 transition-all"
-        onClick={onClose}
-        aria-label="დახურე გადიდებული სურათი"
-      >
-        <X className="h-5 w-5 sm:h-6 sm:w-6" />
-      </button>
-      
-      <div className="w-full max-w-screen-lg h-[80vh] md:h-[85vh] relative bg-white rounded-lg p-2 sm:p-4 shadow-2xl flex items-center justify-center overflow-hidden" onClick={(e) => e.stopPropagation()}>
-        <div className="relative w-full h-full flex items-center justify-center">
-          <Image
-            src={currentImage}
-            alt={productName}
-            className="max-h-full max-w-full object-contain"
-            width={1200}
-            height={1200}
-            style={{ objectFit: 'contain' }}
-          />
-        </div>
-        
-        {hasMultipleImages && (
-          <>
-            <button 
-              onClick={onPrev} 
-              className="absolute left-1 sm:left-4 top-1/2 -translate-y-1/2 bg-white bg-opacity-75 p-2 sm:p-3 rounded-full shadow-md hover:bg-opacity-100 transition-all z-10"
-              aria-label="წინა სურათი"
-            >
-              <ChevronLeft className="h-5 w-5 sm:h-8 sm:w-8 text-gray-800" />
-            </button>
-            <button 
-              onClick={onNext}
-              className="absolute right-1 sm:right-4 top-1/2 -translate-y-1/2 bg-white bg-opacity-75 p-2 sm:p-3 rounded-full shadow-md hover:bg-opacity-100 transition-all z-10"
-              aria-label="შემდეგი სურათი"
-            >
-              <ChevronRight className="h-5 w-5 sm:h-8 sm:w-8 text-gray-800" />
-            </button>
-          </>
-        )}
-      </div>
-    </div>
-  )
-}), { ssr: false }); 
+} 
