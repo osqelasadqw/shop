@@ -7,26 +7,32 @@
       // ეს სკრიპტი დაეხმარება სინგლ-ფეიჯ აპლიკაციას გაუმკლავდეს გადამისამართებას GitHub Pages-ზე
       (function() {
         // გადამისამართების URL-ის შექმნა
-        var segmentCount = 1; // რამდენი სეგმენტი უნდა მოვაშოროთ, მაგ: /shop/[...rest]
         var basePath = '/shop';
         var l = window.location;
+        var host = l.protocol + '//' + l.hostname + (l.port ? ':' + l.port : '');
         
-        // თუ ლოკაცია არ შეიცავს ბაზისურ path-ს, დავამატოთ იგი
-        var pathWithoutBase = l.pathname;
-        if (pathWithoutBase.startsWith(basePath)) {
-          pathWithoutBase = pathWithoutBase.slice(basePath.length);
+        // გადავამისამართოთ მთავარი დომეინიდან /shop-ზე
+        if (l.pathname === '/' || l.pathname === '/index.html') {
+          window.location.href = host + basePath + '/';
+          return;
         }
         
-        // გამოცალკევება დომეინსა და ბაზისურ path-ს შორის
-        var segments = pathWithoutBase.split('/');
-        segments.splice(0, segmentCount);
-        var redirectUrl = basePath + '/' + segments.join('/') + (l.search || '') + (l.hash || '');
-        
-        // შევინახოთ გადამისამართების URL სესიაში
-        sessionStorage.setItem('redirectUrl', redirectUrl);
-        
-        // გადავამისამართოთ ინდექს გვერდზე
-        window.location.href = basePath + '/';
+        // დანარჩენი URL-ებისთვის, შევინახოთ მათი მისამართი
+        var pathWithoutBase = l.pathname;
+        if (!pathWithoutBase.startsWith(basePath)) {
+          // თუ მისამართი არ იწყება /shop-ით, დავამატოთ ეს პრეფიქსი
+          var segments = pathWithoutBase.split('/').filter(function(s) { return s.length > 0; });
+          var redirectUrl = basePath + '/' + segments.join('/') + (l.search || '') + (l.hash || '');
+          
+          // შევინახოთ გადამისამართების URL სესიაში
+          sessionStorage.setItem('redirectUrl', redirectUrl);
+          
+          // გადავამისამართოთ ინდექს გვერდზე
+          window.location.href = host + basePath + '/';
+        } else {
+          // თუ უკვე /shop-ით იწყება, უბრალოდ გადავამისამართოთ მთავარ shop გვერდზე
+          window.location.href = host + basePath + '/';
+        }
       })();
     </script>
   </head>
