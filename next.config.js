@@ -1,9 +1,10 @@
 /** @type {import('next').NextConfig} */
 
 const nextConfig = {
-  // უბრალოდ ჩვეულებრივი დეველოპმენტ ბილდი, სტატიკური ექსპორტის გარეშე
-  basePath: '/shop',
-  assetPrefix: '/shop/',
+  // სტატიკური ექსპორტის ჩართვა GitHub Pages-ისთვის
+  output: "export",
+  basePath: '',
+  assetPrefix: '',
   trailingSlash: true,
   reactStrictMode: true,
   

@@ -31,73 +31,10 @@ jobs:
           static_site_generator: next
       - name: Install dependencies
         run: npm install --legacy-peer-deps
-      - name: Update config to include output:export
-        run: |
-          echo "Updated config to add output:export"
-          sed -i 's/\/\/ output: .export./output: "export",/' next.config.js
-          cat next.config.js
-      - name: Disable dynamic routes for [id] pages
-        run: |
-          # დროებით წაშალეთ ან მოდიფიკაცია გაუკეთეთ დინამიურ გვერდებს
-          echo "Disabling dynamic routes that cause problems in static export"
-          if [ -f "src/app/admin/products/[id]/page.tsx" ]; then
-            mv src/app/admin/products/[id]/page.tsx src/app/admin/products/[id]/page.tsx.bak
-            echo "export default function Page() { return null; }" > src/app/admin/products/[id]/page.tsx
-          fi
-          if [ -f "src/app/admin/products/edit/[id]/page.tsx" ]; then
-            mv src/app/admin/products/edit/[id]/page.tsx src/app/admin/products/edit/[id]/page.tsx.bak 
-            echo "export default function Page() { return null; }" > src/app/admin/products/edit/[id]/page.tsx
-          fi
-          
-          # ეს შეზღუდვა ვრცელდება ყველა დინამიურ როუტერზე, რომელიც იყენებს generateStaticParams()
-          find src/app -type d -name "[*]" -o -name "(*)" -o -name "{*}" | while read -r dir; do
-            if [ -f "$dir/page.tsx" ]; then
-              # შევამოწმოთ თუ ფაილი შეიცავს გენერატეს
-              if grep -q "generateStaticParams" "$dir/page.tsx"; then
-                echo "Simplifying dynamic route in $dir/page.tsx"
-                mv "$dir/page.tsx" "$dir/page.tsx.bak"
-                echo "export default function Page() { return null; }" > "$dir/page.tsx"
-              fi
-            fi
-          done
       - name: Build with Next.js
         run: npm run build
-      - name: Fix routes for GitHub Pages
-        run: |
-          if [ ! -d "out" ]; then
-            echo "Creating out directory"
-            mkdir -p out
-          fi
-          
-          # Create .nojekyll file
-          touch out/.nojekyll
-          
-          # Copy custom 404 page if it exists
-          if [ -f "public/404.html" ]; then
-            cp public/404.html out/404.html
-            echo "Copied custom 404.html to output"
-          fi
-          
-          # მარტივი index.html ფაილის შექმნა თუ არ არსებობს
-          if [ ! -f "out/index.html" ]; then
-            echo "<!DOCTYPE html>" > out/index.html
-            echo "<html>" >> out/index.html
-            echo "  <head>" >> out/index.html
-            echo "    <meta charset=\"utf-8\">" >> out/index.html
-            echo "    <title>OnLyne Shop</title>" >> out/index.html
-            echo "    <script>" >> out/index.html
-            echo "      window.location.href = '/shop/';" >> out/index.html
-            echo "    </script>" >> out/index.html
-            echo "  </head>" >> out/index.html
-            echo "  <body>" >> out/index.html
-            echo "    <div style=\"text-align: center; padding: 20px;\">" >> out/index.html
-            echo "      <h1>გადამისამართება...</h1>" >> out/index.html
-            echo "      <p><a href=\"/shop/\">მაღაზიაზე გადასვლა</a></p>" >> out/index.html
-            echo "    </div>" >> out/index.html
-            echo "  </body>" >> out/index.html
-            echo "</html>" >> out/index.html
-            echo "Created simple redirect index.html in root directory"
-          fi
+      - name: Create .nojekyll file
+        run: touch out/.nojekyll
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
