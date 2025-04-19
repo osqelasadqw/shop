@@ -216,7 +216,7 @@ export function ShopLayout({ children }: ShopLayoutProps) {
                       <div className="flex items-center space-x-4">
                         <div className="flex items-center space-x-2">
                           {user.photoURL && (
-                            <Image 
+                            <img 
                               src={user.photoURL} 
                               alt="User profile" 
                               width={32}
@@ -438,9 +438,9 @@ export function ShopLayout({ children }: ShopLayoutProps) {
                 &copy; {new Date().getFullYear()} OnLyne Store. ყველა უფლება დაცულია.
               </div>
               <div className="flex space-x-4">
-                <Image src="https://cdn-icons-png.flaticon.com/128/196/196578.png" alt="Visa" width={32} height={32} className="grayscale opacity-70 hover:opacity-100 hover:grayscale-0 transition-all" />
-                <Image src="https://cdn-icons-png.flaticon.com/128/196/196561.png" alt="MasterCard" width={32} height={32} className="grayscale opacity-70 hover:opacity-100 hover:grayscale-0 transition-all" />
-                <Image src="https://cdn-icons-png.flaticon.com/128/5968/5968299.png" alt="PayPal" width={32} height={32} className="grayscale opacity-70 hover:opacity-100 hover:grayscale-0 transition-all" />
+                <img src="/images/visa.svg" alt="Visa" width={32} height={32} className="grayscale opacity-70 hover:opacity-100 hover:grayscale-0 transition-all" />
+                <img src="/images/mastercard.svg" alt="MasterCard" width={32} height={32} className="grayscale opacity-70 hover:opacity-100 hover:grayscale-0 transition-all" />
+                <img src="/images/paypal.svg" alt="PayPal" width={32} height={32} className="grayscale opacity-70 hover:opacity-100 hover:grayscale-0 transition-all" />
               </div>
             </div>
           </div>

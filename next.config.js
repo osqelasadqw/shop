@@ -7,6 +7,7 @@ const nextConfig = {
       'via.placeholder.com',
       'lh3.googleusercontent.com',
       'placehold.co',
+      'cdn-icons-png.flaticon.com',
     ],
     unoptimized: true,
   },
@@ -18,4 +19,6 @@ const nextConfig = {
     // ავარიდოთ eslint-ს შეცდომის გამოტანა ბილდის დროს
     ignoreDuringBuilds: true,
   },
-}; 
+};
+
+module.exports = nextConfig; 

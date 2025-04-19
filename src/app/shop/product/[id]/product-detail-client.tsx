@@ -53,7 +53,7 @@ const ZoomedImageModal = ({
       
       <div className="w-full max-w-screen-lg h-[80vh] md:h-[85vh] relative bg-white rounded-lg p-2 sm:p-4 shadow-2xl flex items-center justify-center overflow-hidden" onClick={(e) => e.stopPropagation()}>
         <div className="relative w-full h-full flex items-center justify-center">
-          <Image
+          <img
             src={currentImage}
             alt={productName}
             className="max-h-full max-w-full object-contain"
@@ -278,16 +278,12 @@ export function ProductDetailClient({ id }: ProductDetailClientProps) {
               </div>
             )}
           
-            <Image
+            <img
               src={currentImage}
               alt={product.name}
-              fill={true}
-              sizes="(max-width: 768px) 100vw, 40vw"
-              className="object-contain"
-              priority
+              style={{ objectFit: 'contain', width: '100%', height: '100%' }}
               loading="eager"
-              placeholder="blur"
-              blurDataURL="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII="
+              className="absolute inset-0"
             />
             
             {/* Image Navigation Arrows */}
