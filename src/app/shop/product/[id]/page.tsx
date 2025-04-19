@@ -1,4 +1,4 @@
-import { getProductById } from '@/lib/firebase-service';
+import { getProductById, getAllProducts } from '@/lib/firebase-service';
 import { cache } from 'react';
 import ProductDetailClient from './client';
 
@@ -10,39 +10,27 @@ const getProduct = cache(async (id: string) => {
 // დინამიური პარამეტრები
 export const dynamicParams = true;
 
-// სტატიკური მარშრუტების გენერაცია 404 შეცდომების თავიდან ასაცილებლად
-export function generateStaticParams() {
-  // უნდა დავაბრუნოთ ძალიან ბევრი შესაძლო პარამეტრი, რათა GitHub Pages-მა
-  // წინასწარ შექმნას სტატიკური ფაილები პროდუქტების გვერდებისთვის
-  
-  const productIds = [
-    // რეალური პროდუქტების ID-ები
-    'CyPeQlm4lKBCy4p3IyPI',
-    'Kz6AhKS52Cj3G4zCxINi',
-    'rkVZ1tYjku6SSjRXLIpw',
-    'K3J3kfOcvW4Q32O6PsQO',
-    'vnzapH1bpu9fiWtXhGAI',
-    'xAl4tjHYDaSj1SqY7fws',
-    'kxmyaIWawvglUxWsRf6s',
-    'kwERjuedjengfm1PuJnT',
-    'oLJgXQd2BmJf6Zzk7MdC',
-    '0s6osYbIE1RlQGgzi6ky',
-    'fvSN8QZazRtek6avxE2z',
-    'aqoKz04y5BdaYVfAjR6M',
-    // დამატებით ხელოვნური პარამეტრები ბევრი სხვადასხვა სიგრძით
-    ...Array.from({ length: 100 }, (_, i) => `product${i}`),
-    ...Array.from({ length: 10 }, (_, i) => `test${i}`),
-    ...Array.from({ length: 10 }, (_, i) => `item${i}`),
-    'placeholder', 'demo', 'sample', 'example',
-    // რანდომულად დაგენერირებული იდენტიფიკატორები 
-    ...Array.from({ length: 20 }, (_, i) => 
-      Math.random().toString(36).substring(2, 15) + 
-      Math.random().toString(36).substring(2, 15)
-    ),
-  ];
-  
-  // გარდავქმნათ მასივი ობიექტების მასივად { id: string }
-  return productIds.map(id => ({ id }));
+// დავამატოთ generateStaticParams რომ მოხდეს სტატიკური გვერდების გენერაცია
+export async function generateStaticParams() {
+  try {
+    // ვცდილობთ ყველა პროდუქტის მიღებას
+    const products = await getAllProducts();
+    
+    // თუ პროდუქტები ვერ ამოვიღეთ, დავაბრუნოთ ცარიელი მასივი
+    if (!products) {
+      console.log('პროდუქტები ვერ მოიძებნა სტატიკური გენერაციისთვის');
+      return [{ id: 'placeholder' }];
+    }
+    
+    // ვაბრუნებთ პროდუქტების ID-ების მასივს
+    return products.map(product => ({
+      id: product.id,
+    }));
+  } catch (error) {
+    console.error('შეცდომა generateStaticParams-ში:', error);
+    // შეცდომის შემთხვევაში დავაბრუნოთ ცარიელი მასივი
+    return [{ id: 'placeholder' }];
+  }
 }
 
 // სერვერის მხარეს default ფუნქცია

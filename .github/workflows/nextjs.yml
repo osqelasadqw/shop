@@ -51,50 +51,43 @@ jobs:
           
           # მაღაზიის პროდუქტის დეტალების გვერდი
           if [ -d "src/app/shop/product/[id]" ]; then
-            echo 'export default function Page() { return null; }' > src/app/shop/product/[id]/page.tsx
-            echo 'export function generateStaticParams() { return [{id: "placeholder"}]; }' >> src/app/shop/product/[id]/page.tsx
-            echo "Fixed shop/product/[id] dynamic route"
-          fi
-          
-          # მოვძებნოთ ყველა დარჩენილი დინამიური მარშრუტი
-          find src/app -path "*/[*]*" -type d | while read -r dir; do
-            echo "Found dynamic route directory: $dir"
-            page_file="$dir/page.tsx"
-            if [ -f "$page_file" ]; then
-              if ! grep -q "generateStaticParams" "$page_file"; then
-                echo 'export function generateStaticParams() { return [{id: "placeholder"}]; }' >> "$page_file"
-                echo "Added generateStaticParams to $page_file"
-              fi
+            # შევამოწმოთ არსებობს თუ არა უკვე generateStaticParams ფუნქცია
+            if ! grep -q "generateStaticParams" src/app/shop/product/[id]/page.tsx; then
+              echo 'import { getAllProducts } from "@/lib/firebase-service";' > src/app/shop/product/[id]/page.temp
+              cat src/app/shop/product/[id]/page.tsx >> src/app/shop/product/[id]/page.temp
+              
+              # დავამატოთ generateStaticParams ფუნქცია
+              echo '
+// ინფორმაცია სტატიკური საიტის გენერაციისთვის
+export async function generateStaticParams() {
+  // დავაბრუნოთ ფიქსირებული პროდუქტის ID-ები, რადგან ბილდის დროს Firebase-ს ვერ მივწვდებით
+  return [
+    { id: "rkVZ1tYjku6SSjRXLIpw" },
+    { id: "K3J3kfOcvW4Q32O6PsQO" },
+    { id: "CyPeQlm4lKBCy4p3IyPI" },
+    { id: "Kz6AhKS52Cj3G4zCxINi" },
+    { id: "vnzapH1bpu9fiWtXhGAI" },
+    { id: "xAl4tjHYDaSj1SqY7fws" },
+    { id: "kxmyaIWawvglUxWsRf6s" },
+    { id: "kwERjuedjengfm1PuJnT" },
+    { id: "oLJgXQd2BmJf6Zzk7MdC" },
+    { id: "0s6osYbIE1RlQGgzi6ky" },
+    { id: "fvSN8QZazRtek6avxE2z" },
+    { id: "aqoKz04y5BdaYVfAjR6M" },
+    { id: "placeholder" },
+  ];
+}' >> src/app/shop/product/[id]/page.temp
+              
+              mv src/app/shop/product/[id]/page.temp src/app/shop/product/[id]/page.tsx
+              echo "Added static generateStaticParams to shop/product/[id] dynamic route"
+            else
+              echo "generateStaticParams already exists in shop/product/[id]/page.tsx"
             fi
-          done
+          fi
+      - name: Create .nojekyll file
+        run: touch ./out/.nojekyll
       - name: Build with Next.js
         run: npm run build
-      - name: Create .nojekyll file
-        run: |
-          # შევამოწმოთ out დირექტორია არსებობს თუ არა
-          if [ ! -d "out" ]; then
-            echo "Creating out directory as it doesn't exist"
-            mkdir -p out
-          fi
-          # შევქმნათ .nojekyll ფაილი
-          touch out/.nojekyll
-          # შევამოწმოთ ფაილი შეიქმნა თუ არა
-          if [ -f "out/.nojekyll" ]; then
-            echo ".nojekyll file created successfully"
-          else
-            echo "Error: Failed to create .nojekyll file"
-            ls -la out/
-            exit 1
-          fi
-          
-          # დავაკოპიროთ 404.html ფაილი
-          if [ -f "public/404.html" ]; then
-            cp public/404.html out/404.html
-            echo "404.html file copied successfully"
-          else
-            echo "Error: public/404.html file not found"
-            exit 1
-          fi
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
