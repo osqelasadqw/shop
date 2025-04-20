@@ -1,4 +1,18 @@
-// სტატიკური გვერდი ადმინის პროდუქტის დეტალებისთვის
+import { Metadata } from 'next';
+import ProductEditClient from './client';
+
+// დინამიური პარამეტრები
+export const dynamicParams = true;
+
+// მეტადატა ფუნქცია, რომელიც აწვდის SEO ინფორმაციას
+export function generateMetadata({ params }: { params: { id: string } }): Metadata {
+  return {
+    title: `პროდუქტის დეტალები - ${params.id}`,
+    description: 'პროდუქტის დეტალების გვერდი',
+  };
+}
+
+// სტატიკური მარშრუტების გენერაცია 404 შეცდომების თავიდან ასაცილებლად
 export function generateStaticParams() {
   const ids = [
     'CyPeQlm4lKBCy4p3IyPI',
@@ -10,11 +24,7 @@ export function generateStaticParams() {
   return ids.map(id => ({ id }));
 }
 
+// სერვერის მხარის კომპონენტი, რომელიც იყენებს კლიენტის მხარის გადამისამართების კომპონენტს
 export default function ProductPage({ params }: { params: { id: string } }) {
-  return (
-    <div className="p-8">
-      <h1 className="text-2xl font-bold mb-4">პროდუქტი: {params.id}</h1>
-      <p>ეს გვერდი გამოიყენება სტატიკური ექსპორტისთვის.</p>
-    </div>
-  );
+  return <ProductEditClient id={params.id} />;
 }
