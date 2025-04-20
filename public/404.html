@@ -26,8 +26,9 @@
           // შევინახოთ ID localStorage-ში
           localStorage.setItem('currentProductId', productId);
           
-          // გადავამისამართოთ მთავარ გვერდზე product პარამეტრით
-          window.location.href = origin + basePath + '/?product=' + productId;
+          // გადავამისამართოთ მთავარ გვერდზე hash პარამეტრით
+          // ვიყენებთ hash ნავიგაციას, რომელიც უკეთ მუშაობს GitHub Pages-ზე
+          window.location.href = origin + basePath + '/#product=' + productId;
           return;
         }
         

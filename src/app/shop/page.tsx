@@ -130,25 +130,35 @@ export default function ShopPage() {
     fetchInitialData();
   }, [categoryId]);
 
-  // დავამატოთ პროდუქტის პარამეტრის მართვა URL-დან (404.html-დან გადამისამართებისთვის)
+  // დავამატოთ პროდუქტის პარამეტრის მართვა URL-დან და hash ფრაგმენტიდან GitHub Pages-ისთვის
   useEffect(() => {
-    // შევამოწმოთ URL-ში არის თუ არა პროდუქტის პარამეტრი
+    // შევამოწმოთ URL-ში არის თუ არა პროდუქტის პარამეტრი ან hash ფრაგმენტი
     if (typeof window !== 'undefined') {
+      // ჯერ შევამოწმოთ ჩვეულებრივი URL პარამეტრები
       const searchParams = new URLSearchParams(window.location.search);
-      const productId = searchParams.get('product');
+      let productId = searchParams.get('product');
+      
+      // თუ URL პარამეტრში არ არის, შევამოწმოთ hash ფრაგმენტი (GitHub Pages-ისთვის)
+      if (!productId && window.location.hash) {
+        const hashParams = new URLSearchParams(window.location.hash.substring(1));
+        productId = hashParams.get('product');
+      }
       
       if (productId) {
-        console.log('ნაპოვნია პროდუქტის ID URL-ში:', productId);
+        console.log('ნაპოვნია პროდუქტის ID URL-ში ან hash-ში:', productId);
         localStorage.setItem('currentProductId', productId);
         
         // გავითვალისწინოთ GitHub Pages გარემო
         const isGitHubPages = window.location.origin.includes('github.io');
         
         if (isGitHubPages) {
-          // ვიყენებთ შიდა URL-ს, რომელიც სწორად მუშაობს
-          console.log('GitHub Pages გარემო, ვიყენებთ შიდა ნავიგაციას');
+          // გავწმინდოთ URL-ი hash-ისგან, რომ თავიდან ავირიდოთ ციკლური გადამისამართება
+          if (window.location.hash) {
+            window.history.replaceState({}, document.title, window.location.pathname);
+          }
+          
+          // გამოვიყენოთ Next.js როუტერი, რომელიც მუშაობს ლოკალურად GitHub Pages-ზე
           setTimeout(() => {
-            // დავაყოვნოთ, რომ დარწმუნებული ვიყოთ ყველაფერი ჩატვირთულია
             router.push(`/shop/product/${productId}`);
           }, 100);
         } else {

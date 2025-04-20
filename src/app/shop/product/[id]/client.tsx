@@ -256,8 +256,8 @@ export default function ProductDetailClient({ id: routeId }: { id?: string }) {
       const isGitHubPages = window.location.origin.includes('github.io');
       
       if (isGitHubPages) {
-        // GitHub Pages გარემოსთვის - პირდაპირ გადამისამართება
-        window.location.href = `${window.location.origin}/shop/?product=${relatedProductId}`;
+        // GitHub Pages გარემოსთვის - გამოვიყენოთ hash ფრაგმენტი
+        window.location.href = `${window.location.origin}/shop/#product=${relatedProductId}`;
       } else {
         // ლოკალური დეველოპმენტისთვის Next.js როუტერი
         router.push(`/shop/product/${relatedProductId}`);
