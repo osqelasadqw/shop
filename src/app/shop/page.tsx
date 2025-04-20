@@ -148,23 +148,8 @@ export default function ShopPage() {
         console.log('ნაპოვნია პროდუქტის ID URL-ში ან hash-ში:', productId);
         localStorage.setItem('currentProductId', productId);
         
-        // გავითვალისწინოთ GitHub Pages გარემო
-        const isGitHubPages = window.location.origin.includes('github.io');
-        
-        if (isGitHubPages) {
-          // გავწმინდოთ URL-ი hash-ისგან, რომ თავიდან ავირიდოთ ციკლური გადამისამართება
-          if (window.location.hash) {
-            window.history.replaceState({}, document.title, window.location.pathname);
-          }
-          
-          // გამოვიყენოთ Next.js როუტერი, რომელიც მუშაობს ლოკალურად GitHub Pages-ზე
-          setTimeout(() => {
-            router.push(`/shop/product/${productId}`);
-          }, 100);
-        } else {
-          // ლოკალური განვითარების გარემო
-          router.push(`/shop/product/${productId}`);
-        }
+        // გადავამისამართოთ სტატიკურ პროდუქტის გვერდზე
+        window.location.href = `${window.location.origin}/shop/static-product`;
       }
     }
   }, [router]);

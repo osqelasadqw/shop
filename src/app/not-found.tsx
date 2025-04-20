@@ -6,19 +6,19 @@ import { Button } from '@/components/ui/button';
 
 export default function NotFound() {
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center px-6 py-12 bg-gray-50">
-      <div className="text-center max-w-md">
-        <h1 className="text-9xl font-bold text-primary mb-2">404</h1>
-        <h2 className="text-3xl font-bold mb-4">გვერდი ვერ მოიძებნა</h2>
-        <p className="text-muted-foreground mb-8">
-          თქვენ მიერ მოთხოვნილი გვერდი არ არსებობს ან წაშლილია.
-          გთხოვთ, შეამოწმოთ URL ან დაბრუნდეთ მთავარ გვერდზე.
+    <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50 px-4">
+      <div className="text-center">
+        <h1 className="text-6xl font-bold text-rose-600 mb-4">404</h1>
+        <h2 className="text-3xl font-semibold text-gray-900 mb-6">გვერდი ვერ მოიძებნა</h2>
+        <p className="text-lg text-gray-600 mb-8">
+          სამწუხაროდ, თქვენ მიერ მოთხოვნილი გვერდი ვერ მოიძებნა.
         </p>
-        <Button asChild>
-          <Link href="/shop">
-            მთავარ გვერდზე დაბრუნება
-          </Link>
-        </Button>
+        <Link
+          href="/shop"
+          className="inline-block px-6 py-3 rounded-md bg-rose-600 text-white font-medium hover:bg-rose-700 transition-colors"
+        >
+          დაბრუნდით მთავარ გვერდზე
+        </Link>
       </div>
     </div>
   );

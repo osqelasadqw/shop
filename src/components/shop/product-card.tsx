@@ -39,15 +39,8 @@ export function ProductCard({ product, loading = false, specialBadge = false, is
       // შევამოწმოთ ვართ თუ არა GitHub Pages-ზე 
       const isGitHubPages = window.location.origin.includes('github.io');
       
-      if (isGitHubPages) {
-        // GitHub Pages გარემოსთვის - პირდაპირ გადამისამართება window.location-ით
-        // მთავარი პრობლემა: Next.js უყურებს '/shop' როგორც basePath, მაგრამ GitHub Pages-ზე 
-        // თვითონ '/shop' უკვე არის რეპოზიტორიის სახელი URL-ში
-        window.location.href = `${window.location.origin}/shop/#product=${product.id}`;
-      } else {
-        // ლოკალური დეველოპმენტისთვის Next.js როუტერი
-        router.push(`/shop/product/${product.id}`);
-      }
+      // ყველა შემთხვევაში მივმართავთ სტატიკურ პროდუქტის გვერდზე
+      window.location.href = `${window.location.origin}/shop/static-product`;
     }
   };
 
