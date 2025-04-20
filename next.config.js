@@ -1,21 +1,10 @@
 /** @type {import('next').NextConfig} */
 
 const nextConfig = {
-  // სტატიკური ექსპორტის ჩართვა GitHub Pages-ისთვის
-  // output: "export", 
-  // განვსაზღვროთ საიტის ბილდის დირექტორია
-  // distDir: 'out',
-  
-  // განვაახლოთ GitHub Pages-ისთვის - 'shop' არის რეპოზიტორიის სახელი
-  // basePath: '/shop',
-  // assetPrefix: '/shop',
-  // trailingSlash: true,
   reactStrictMode: true,
   
-  // ჩავრთოთ ფაილური სისტემის რუტები
   useFileSystemPublicRoutes: true,
   
-  // გადატანილია ძირითად დონეზე experimental-იდან
   outputFileTracingExcludes: {
     '/admin/products/**': [
       'node_modules/**',
@@ -25,7 +14,6 @@ const nextConfig = {
     ],
   },
   
-  // შენარჩუნებულია მხოლოდ ვალიდური ექსპერიმენტული პარამეტრები
   experimental: {
     // ვალიდური პარამეტრების სია Next.js 15.2.4-ისთვის
     esmExternals: 'loose',
@@ -34,7 +22,6 @@ const nextConfig = {
     },
   },
   
-  // გადატანილია experimental-იდან
   serverExternalPackages: [],
   
   images: {
@@ -65,16 +52,13 @@ const nextConfig = {
     return config;
   },
   typescript: {
-    // ავარიდოთ ტიპსკრიპტს შეცდომის გამოტანა ბილდის დროს
     ignoreBuildErrors: true,
   },
   eslint: {
-    // ავარიდოთ eslint-ს შეცდომის გამოტანა ბილდის დროს
     ignoreDuringBuilds: true,
   },
 };
 
-// onPostBuild ფუნქციონალი გადატანილია ცალკე, რადგან ეს არ არის Next.js-ის ნაწილი
 const fs = require('fs');
 const path = require('path');
 
