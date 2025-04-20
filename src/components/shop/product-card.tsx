@@ -41,11 +41,13 @@ export function ProductCard({ product, loading = false, specialBadge = false, is
       const base = window.location.origin;
       let productUrl;
       
+      // გითჰაბ გვერდზე უნდა გადამისამართდეს /shop/shop/product/ გზაზე
+      // გავამარტივოთ ლოგიკა და გამოვიყენოთ უფრო სანდო მეთოდი
       if (base.includes('github.io')) {
-        // გამოვიყენოთ სპეციალური redirect.html ფაილი GitHub Pages-ისთვის
-        productUrl = `${base}/shop/shop/product/${product.id}/redirect.html`;
+        // github pages გარემოსთვის
+        productUrl = `${base}/shop/shop/product/${product.id}/`;
       } else {
-        // ლოკალური დეველოპმენტისთვის ჩვეულებრივი მისამართი
+        // ლოკალური დეველოპმენტისთვის ან სხვა გარემოსთვის
         productUrl = `${base}/shop/product/${product.id}/`;
       }
       

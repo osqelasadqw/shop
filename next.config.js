@@ -100,39 +100,8 @@ if (typeof require !== 'undefined' && require.main === module) {
     } else {
       console.warn('⚠️ public/404.html ფაილი ვერ მოიძებნა');
     }
-
-    // პროდუქტის რედირექტ ფაილის კოპირება
-    if (fs.existsSync(path.join(process.cwd(), 'public', 'product-redirect.html'))) {
-      // წაკითხვა
-      const redirectContent = fs.readFileSync(
-        path.join(process.cwd(), 'public', 'product-redirect.html'),
-        'utf8'
-      );
-      
-      // დავიწყოთ out/shop/product დირექტორიის სკანირება
-      const productPath = path.join(process.cwd(), 'out', 'shop', 'product');
-      if (fs.existsSync(productPath)) {
-        // მივიღოთ ყველა ქვედირექტორია
-        const productDirs = fs.readdirSync(productPath, { withFileTypes: true })
-          .filter(dirent => dirent.isDirectory())
-          .map(dirent => dirent.name);
-          
-        // თითოეულ ქვედირექტორიაში დავაკოპიროთ redirect.html
-        productDirs.forEach(dir => {
-          const targetPath = path.join(productPath, dir, 'redirect.html');
-          fs.writeFileSync(targetPath, redirectContent, 'utf8');
-          console.log(`✅ redirect.html დაკოპირდა პროდუქტში: ${dir}`);
-        });
-        
-        console.log(`✅ redirect.html ფაილები დაკოპირდა ${productDirs.length} პროდუქტის დირექტორიაში`);
-      } else {
-        console.warn('⚠️ out/shop/product დირექტორია ვერ მოიძებნა');
-      }
-    } else {
-      console.warn('⚠️ public/product-redirect.html ფაილი ვერ მოიძებნა');
-    }
   } catch (error) {
-    console.error('❌ ფაილების კოპირების შეცდომა:', error);
+    console.error('❌ 404.html ფაილის კოპირების შეცდომა:', error);
   }
 }
 

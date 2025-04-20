@@ -9,7 +9,7 @@
   },
   "scripts": {
     "dev": "next dev",
-    "build": "node src/build-fix.js && next build && node -e \"require('fs').writeFileSync('out/.nojekyll', '')\" && node -e \"if(require('fs').existsSync('public/404.html')) require('fs').copyFileSync('public/404.html', 'out/404.html')\"",
+    "build": "next build && node -e \"require('fs').writeFileSync('out/.nojekyll', '')\" && node -e \"if(require('fs').existsSync('public/404.html')) require('fs').copyFileSync('public/404.html', 'out/404.html')\"",
     "start": "next start",
     "lint": "next lint"
   },
