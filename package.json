@@ -9,7 +9,7 @@
   },
   "scripts": {
     "dev": "next dev",
-    "build": "powershell -Command \"New-Item -ItemType Directory -Force out; New-Item -ItemType File -Force out/.nojekyll\" && next build && node -e \"if(require('fs').existsSync('public/404.html')) require('fs').copyFileSync('public/404.html', 'out/404.html')\"",
+    "build": "mkdir -p out && touch out/.nojekyll && next build && node -e \"if(require('fs').existsSync('public/404.html')) require('fs').copyFileSync('public/404.html', 'out/404.html')\"",
     "start": "next start",
     "lint": "next lint"
   },
