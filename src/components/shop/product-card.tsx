@@ -37,8 +37,20 @@ export function ProductCard({ product, loading = false, specialBadge = false, is
       localStorage.setItem('currentProductId', product.id);
       console.log('პროდუქტის ID შენახულია:', product.id);
       
-      // გადავიდეთ პროდუქტის გვერდზე პირდაპირ - გამოვასწოროთ URL რომ სწორად შეიცავდეს /shop/ ნაწილს
-      window.location.href = `${window.location.origin}/shop/product/${product.id}/`;
+      // გავასწოროთ URL-ის გენერირების ლოგიკა
+      // თავიდან შევამოწმოთ თუ origin უკვე შეიცავს '/shop'
+      const base = window.location.origin;
+      let productUrl;
+      
+      if (base.includes('/shop')) {
+        // თუ origin-ში უკვე გვაქვს '/shop', გამოვიყენოთ სრული მისამართი '/product/-მდე
+        productUrl = `${base}/product/${product.id}/`;
+      } else {
+        // წინააღმდეგ შემთხვევაში, დავამატოთ '/shop'
+        productUrl = `${base}/shop/product/${product.id}/`;
+      }
+      
+      window.location.href = productUrl;
     }
   };
 

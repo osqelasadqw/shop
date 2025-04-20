@@ -6,13 +6,14 @@ const nextConfig = {
   // განვსაზღვროთ საიტის ბილდის დირექტორია
   distDir: 'out',
   
-  basePath: '',
-  assetPrefix: '',
+  // განვაახლოთ GitHub Pages-ისთვის - 'shop' არის რეპოზიტორიის სახელი
+  basePath: '/shop',
+  assetPrefix: '/shop',
   trailingSlash: true,
   reactStrictMode: true,
   
-  // გადატანილია ძირითად დონეზე experimental-იდან
-  useFileSystemPublicRoutes: false,
+  // ჩავრთოთ ფაილური სისტემის რუტები
+  useFileSystemPublicRoutes: true,
   
   // გადატანილია ძირითად დონეზე experimental-იდან
   outputFileTracingExcludes: {
