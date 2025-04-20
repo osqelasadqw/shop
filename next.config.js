@@ -2,14 +2,14 @@
 
 const nextConfig = {
   // სტატიკური ექსპორტის ჩართვა GitHub Pages-ისთვის
-  output: "export", 
+  // output: "export", 
   // განვსაზღვროთ საიტის ბილდის დირექტორია
-  distDir: 'out',
+  // distDir: 'out',
   
   // განვაახლოთ GitHub Pages-ისთვის - 'shop' არის რეპოზიტორიის სახელი
-  basePath: '/shop',
-  assetPrefix: '/shop',
-  trailingSlash: true,
+  // basePath: '/shop',
+  // assetPrefix: '/shop',
+  // trailingSlash: true,
   reactStrictMode: true,
   
   // ჩავრთოთ ფაილური სისტემის რუტები
