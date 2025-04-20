@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>პროდუქტის გვერდი</title>
+  <script>
+    // წავიკითხოთ პროდუქტის ID URL-დან
+    function getProductIdFromUrl() {
+      const path = window.location.pathname;
+      console.log('გზა:', path);
+      
+      const parts = path.split('/');
+      const productIndex = parts.indexOf('product');
+      if (productIndex !== -1 && productIndex < parts.length - 1) {
+        return parts[productIndex + 1];
+      }
+      
+      return null;
+    }
+    
+    // შევინახოთ პროდუქტის ID localStorage-ში სხვა გვერდებისთვის
+    const productId = getProductIdFromUrl();
+    if (productId) {
+      localStorage.setItem('currentProductId', productId);
+      console.log('პროდუქტის ID შენახულია:', productId);
+    }
+  </script>
+  <!-- დავიმპორტოთ შესაბამისი JavaScript ბიბლიოთეკები -->
+  <script src="/shop/_next/static/chunks/main.js" defer></script>
+  <script src="/shop/_next/static/chunks/webpack.js" defer></script>
+  <script src="/shop/_next/static/chunks/pages/_app.js" defer></script>
+  <!-- დავიმპორტოთ პროდუქტის გვერდის JavaScript -->
+  <script src="/shop/_next/static/chunks/pages/shop/product/[id]/client.js" defer></script>
+</head>
+<body>
+  <div id="__next">
+    <div class="loading-container" style="display: flex; justify-content: center; align-items: center; height: 100vh;">
+      <div>
+        <h2>პროდუქტი იტვირთება...</h2>
+        <div style="display: flex; justify-content: center;">
+          <div style="width: 40px; height: 40px; border: 4px solid #f3f3f3; border-top: 4px solid #3498db; border-radius: 50%; animation: spin 1s linear infinite;"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <style>
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+  </style>
+  
+  <script>
+    // შევქმნათ კომპონენტი client.tsx-დან 
+    document.addEventListener('DOMContentLoaded', function() {
+      // თუ ხელმისაწვდომია, გამოვიძახოთ მთავარი ProductDetailClient კომპონენტი
+      if (typeof window.ProductDetailClient === 'function') {
+        const container = document.getElementById('__next');
+        // გამოვიყენოთ React DOM, თუ ხელმისაწვდომია
+        if (window.ReactDOM && container) {
+          window.ReactDOM.render(
+            window.React.createElement(window.ProductDetailClient, { id: productId }),
+            container
+          );
+        }
+      }
+    });
+  </script>
+</body>
+</html> 
