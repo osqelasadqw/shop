@@ -10,16 +10,21 @@
         const basePath = '/shop';
         const origin = window.location.origin;
         
+        console.log('404 გვერდზე ვართ, გზა:', path);
+        
         // შევამოწმოთ, თუ პირდაპირ პროდუქტის გვერდზე ვართ შესული
         // და მისამართი სწორია (/shop/product/...), არაფერი არ ვქნათ.
         // Next.js-ის როუტერი თავად მოაგვარებს.
         const productPattern = /^\/shop\/product\/[^\/]+\/?$/;
-        if (productPattern.test(path)) {
+        const alternateProductPattern = /^\/shop\/shop\/product\/[^\/]+\/?$/;
+        
+        if (productPattern.test(path) || alternateProductPattern.test(path)) {
           console.log('404: სწორი პროდუქტის გვერდის მისამართია, არ ვამისამართებთ.');
           // სურვილისამებრ, შეგვიძლია localStorage-ში ID შევინახოთ, თუ კლიენტი ამას ელოდება
-          const match = path.match(productPattern);
+          const match = path.match(/\/product\/([^\/]+)/);
           if (match && match[1]) {
              localStorage.setItem('currentProductId', match[1]);
+             console.log('ID შენახულია:', match[1]);
           }
           return; // გავაჩეროთ სკრიპტი
         }

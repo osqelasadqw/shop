@@ -76,13 +76,34 @@ export default function ProductDetailClient({ id: routeId }: { id?: string }) {
         // გამოვიტანოთ ურლ-დან ID-ს ამოღების მცდელობა
         try {
           const pathParts = window.location.pathname.split('/');
-          const productIndex = pathParts.indexOf('product');
-          if (productIndex !== -1 && productIndex < pathParts.length - 1) {
-            const productId = pathParts[productIndex + 1];
-            console.log('ID ამოღებულია URL-დან:', productId);
+          console.log('URL გზის ნაწილები:', pathParts);
+          
+          // უფრო მძლავრი ლოგიკა - ბოლო ნაწილიდან ID-ის ამოღება
+          // თუ ბოლო ელემენტი ცარიელია (გზა მთავრდება '/'-ით), მაშინ წინა ელემენტია საჭირო
+          let productId;
+          
+          if (pathParts[pathParts.length - 1] === '') {
+            // თუ URL მთავრდება '/'-ით, ID არის წინა ელემენტი
+            productId = pathParts[pathParts.length - 2];
+          } else {
+            // თუ არ არის '/', მაშინ ბოლო ელემენტია ID
+            productId = pathParts[pathParts.length - 1];
+          }
+          
+          console.log('ID ამოღებულია URL-დან:', productId);
+          
+          if (productId) {
             setId(productId);
           } else {
-            setError('პროდუქტის ID ვერ მოიძებნა');
+            // ძებნა product ნაწილის შემდეგ
+            const productIndex = pathParts.indexOf('product');
+            if (productIndex !== -1 && productIndex < pathParts.length - 1) {
+              productId = pathParts[productIndex + 1];
+              console.log('ID ამოღებულია "product" ნაწილის შემდეგ:', productId);
+              setId(productId);
+            } else {
+              setError('პროდუქტის ID ვერ მოიძებნა');
+            }
           }
         } catch (e) {
           console.error('შეცდომა ID-ის ამოღებისას URL-დან:', e);

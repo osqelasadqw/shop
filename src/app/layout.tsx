@@ -81,21 +81,44 @@ const handleRscErrorsScript = `
             // შევინახოთ პროდუქტის ID localStorage-ში
             localStorage.setItem('currentProductId', productId);
             
-            // გადავიდეთ პროდუქტის გვერდზე
-            window.location.href = \`\${window.location.origin}/shop/shop/product/\${productId}/\`;
+            // დავადგინოთ სწორი URL GitHub Pages-სთვის
+            const isGitHubPages = window.location.origin.includes('github.io');
+            let targetUrl;
+            
+            if (isGitHubPages) {
+              // GitHub Pages-სთვის გვჭირდება დამატებითი /shop პრეფიქსი
+              targetUrl = \`\${window.location.origin}/shop/shop/product/\${productId}/\`;
+            } else {
+              // ლოკალური დეველოპმენტისთვის
+              targetUrl = \`\${window.location.origin}/shop/product/\${productId}/\`;
+            }
+            
+            console.log('გადამისამართება URL-ზე:', targetUrl);
+            window.location.href = targetUrl;
           }
         }
       }
     }, true);
     
     // მარშრუტიზაციის ლოგიკა პროდუქტის გვერდებისთვის
-    if (window.location.pathname.includes('/shop/product/')) {
+    if (window.location.pathname.includes('/shop/product/') || 
+        window.location.pathname.includes('/shop/shop/product/')) {
       console.log('პროდუქტის გვერდზე ვართ:', window.location.pathname);
-      // წავიკითხოთ პროდუქტის ID
-      const pathParts = window.location.pathname.split('/');
-      const productIndex = pathParts.indexOf('product');
-      if (productIndex !== -1 && productIndex < pathParts.length - 1) {
-        const productId = pathParts[productIndex + 1];
+      
+      // წავიკითხოთ პროდუქტის ID - გამოვიყენოთ სტრინგის ძებნა ნაცვლად რეგულარული გამოსახულებისა
+      const path = window.location.pathname;
+      let productId = null;
+      
+      // ვიპოვოთ "product" სიტყვის ინდექსი
+      const productKeyword = "product/";
+      const productIndex = path.indexOf(productKeyword);
+      
+      if (productIndex !== -1) {
+        // ამოვიღოთ ყველაფერი productKeyword-ის შემდეგ
+        const afterKeyword = path.substring(productIndex + productKeyword.length);
+        // თუ შეიცავს '/', მხოლოდ პირველ სეგმენტს ვიღებთ
+        productId = afterKeyword.split('/')[0];
+        
         console.log('პროდუქტის ID გამოტანილი:', productId);
         localStorage.setItem('currentProductId', productId);
       }

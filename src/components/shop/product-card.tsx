@@ -38,18 +38,20 @@ export function ProductCard({ product, loading = false, specialBadge = false, is
       console.log('პროდუქტის ID შენახულია:', product.id);
       
       // გავასწოროთ URL-ის გენერირების ლოგიკა
-      // თავიდან შევამოწმოთ თუ origin უკვე შეიცავს '/shop'
       const base = window.location.origin;
       let productUrl;
       
-      if (base.includes('/shop')) {
-        // თუ origin-ში უკვე გვაქვს '/shop', გამოვიყენოთ სრული მისამართი '/product/-მდე
-        productUrl = `${base}/product/${product.id}/`;
+      // გითჰაბ გვერდზე უნდა გადამისამართდეს /shop/shop/product/ გზაზე
+      // გავამარტივოთ ლოგიკა და გამოვიყენოთ უფრო სანდო მეთოდი
+      if (base.includes('github.io')) {
+        // github pages გარემოსთვის
+        productUrl = `${base}/shop/shop/product/${product.id}/`;
       } else {
-        // წინააღმდეგ შემთხვევაში, დავამატოთ '/shop'
+        // ლოკალური დეველოპმენტისთვის ან სხვა გარემოსთვის
         productUrl = `${base}/shop/product/${product.id}/`;
       }
       
+      console.log('გადამისამართება URL-ზე:', productUrl);
       window.location.href = productUrl;
     }
   };
