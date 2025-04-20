@@ -251,7 +251,17 @@ export default function ProductDetailClient({ id: routeId }: { id?: string }) {
     
     if (typeof window !== 'undefined') {
       localStorage.setItem('currentProductId', relatedProductId);
-      router.push(`/shop/product/${relatedProductId}`);
+      
+      // შევამოწმოთ ვართ თუ არა GitHub Pages-ზე
+      const isGitHubPages = window.location.origin.includes('github.io');
+      
+      if (isGitHubPages) {
+        // GitHub Pages გარემოსთვის - პირდაპირ გადამისამართება
+        window.location.href = `${window.location.origin}/shop/?product=${relatedProductId}`;
+      } else {
+        // ლოკალური დეველოპმენტისთვის Next.js როუტერი
+        router.push(`/shop/product/${relatedProductId}`);
+      }
     }
   };
 

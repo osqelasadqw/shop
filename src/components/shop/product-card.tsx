@@ -36,15 +36,15 @@ export function ProductCard({ product, loading = false, specialBadge = false, is
     if (typeof window !== 'undefined') {
       localStorage.setItem('currentProductId', product.id);
       
-      // გამოვიყენოთ Next.js როუტერი ნავიგაციისთვის
-      // შევამოწმოთ ვართ თუ არა GitHub Pages-ზე (ეს გავლენას ახდენს როუტზე)
+      // შევამოწმოთ ვართ თუ არა GitHub Pages-ზე 
       const isGitHubPages = window.location.origin.includes('github.io');
       
       if (isGitHubPages) {
-        // GitHub Pages გარემოსთვის
-        router.push(`/shop/product/${product.id}`);
+        // GitHub Pages გარემოსთვის - პირდაპირ გადამისამართება window.location-ით
+        // რადგან router.push არ მუშაობს კორექტულად GitHub Pages-ზე
+        window.location.href = `${window.location.origin}/shop/?product=${product.id}`;
       } else {
-        // ლოკალური დეველოპმენტისთვის
+        // ლოკალური დეველოპმენტისთვის Next.js როუტერი
         router.push(`/shop/product/${product.id}`);
       }
     }

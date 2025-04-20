@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <title>გვერდი ვერ მოიძებნა</title>
     <script>
-      // ძალიან გამარტივებული 404 ლოგიკა GitHub Pages SPA-სთვის
+      // GitHub Pages-ზე დაკარგული გვერდების მართვა
       (function() {
         const path = window.location.pathname;
         const basePath = '/shop';
@@ -12,30 +12,27 @@
         
         console.log('404 გვერდზე ვართ, გზა:', path);
         
-        // შევამოწმოთ, თუ პირდაპირ პროდუქტის გვერდზე ვართ შესული
-        // და მისამართი სწორია, მაშინ გადავამისამართოთ index.html-ზე
-        // რათა Next.js-მა შეძლოს მარშრუტიზაცია
-        const productPattern = /^\/shop\/product\/[^\/]+\/?$/;
-        const alternateProductPattern = /^\/shop\/shop\/product\/[^\/]+\/?$/;
+        // შევამოწმოთ, პროდუქტის გვერდზე ვცდილობთ გადასვლას თუ არა
+        const productPattern = /\/shop\/product\/([^\/]+)\/?$/;
+        const alternateProductPattern = /\/shop\/shop\/product\/([^\/]+)\/?$/;
         
-        if (productPattern.test(path) || alternateProductPattern.test(path)) {
-          console.log('404: პროდუქტის გვერდის მისამართია:', path);
+        // პირველად ვცდილობთ პატერნიდან ID-ის ამოღებას
+        let productMatch = path.match(productPattern) || path.match(alternateProductPattern);
+        
+        if (productMatch && productMatch[1]) {
+          const productId = productMatch[1];
+          console.log('პროდუქტის ID ამოღებულია:', productId);
           
-          // ამოვიღოთ პროდუქტის ID
-          const match = path.match(/\/product\/([^\/]+)/);
-          if (match && match[1]) {
-             const productId = match[1];
-             localStorage.setItem('currentProductId', productId);
-             console.log('ID შენახულია:', productId);
-             
-             // გადავამისამართოთ index.html-ზე შენახული ID-ით
-             window.location.href = origin + basePath + '/?product=' + productId;
-             return;
-          }
+          // შევინახოთ ID localStorage-ში
+          localStorage.setItem('currentProductId', productId);
+          
+          // გადავამისამართოთ მთავარ გვერდზე product პარამეტრით
+          window.location.href = origin + basePath + '/?product=' + productId;
+          return;
         }
         
-        // თუ მისამართი სხვა არის, გადავამისამართოთ მთავარ გვერდზე
-        console.log('404: არასწორი მისამართი, გადამისამართება /shop/-ზე:', path);
+        // თუ ვერ ვიპოვეთ პროდუქტის ID, გადავამისამართოთ მთავარ გვერდზე
+        console.log('გადამისამართება მთავარ გვერდზე');
         window.location.href = origin + basePath + '/';
       })();
     </script>

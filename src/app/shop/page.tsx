@@ -141,8 +141,20 @@ export default function ShopPage() {
         console.log('ნაპოვნია პროდუქტის ID URL-ში:', productId);
         localStorage.setItem('currentProductId', productId);
         
-        // გადავამისამართოთ პროდუქტის გვერდზე
-        router.push(`/shop/product/${productId}`);
+        // გავითვალისწინოთ GitHub Pages გარემო
+        const isGitHubPages = window.location.origin.includes('github.io');
+        
+        if (isGitHubPages) {
+          // ვიყენებთ შიდა URL-ს, რომელიც სწორად მუშაობს
+          console.log('GitHub Pages გარემო, ვიყენებთ შიდა ნავიგაციას');
+          setTimeout(() => {
+            // დავაყოვნოთ, რომ დარწმუნებული ვიყოთ ყველაფერი ჩატვირთულია
+            router.push(`/shop/product/${productId}`);
+          }, 100);
+        } else {
+          // ლოკალური განვითარების გარემო
+          router.push(`/shop/product/${productId}`);
+        }
       }
     }
   }, [router]);
