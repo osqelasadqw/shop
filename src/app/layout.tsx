@@ -61,45 +61,6 @@ const handleRscErrorsScript = `
       return originalFetch(resource, options);
     };
     
-    // დავამატოთ კლიკის მსმენელი დოკუმენტზე პროდუქტის ბმულებისთვის
-    document.addEventListener('click', function(e) {
-      const target = e.target as HTMLElement;
-      const link = target.closest('a');
-      
-      if (link) {
-        const href = link.getAttribute('href');
-        if (href && href.includes('/shop/product/')) {
-          // ვაპრევენთოთ ნაგულისხმევი ქცევა
-          e.preventDefault();
-          
-          // ვიპოვოთ პროდუქტის ID
-          const idMatch = href.match(/\/shop\/product\/([^\/]+)/);
-          if (idMatch && idMatch[1]) {
-            const productId = idMatch[1];
-            console.log('პროდუქტის ID:', productId);
-            
-            // შევინახოთ პროდუქტის ID localStorage-ში
-            localStorage.setItem('currentProductId', productId);
-            
-            // დავადგინოთ სწორი URL GitHub Pages-სთვის
-            const isGitHubPages = window.location.origin.includes('github.io');
-            let targetUrl;
-            
-            if (isGitHubPages) {
-              // GitHub Pages-სთვის გვჭირდება დამატებითი /shop პრეფიქსი
-              targetUrl = \`\${window.location.origin}/shop/shop/product/\${productId}/\`;
-            } else {
-              // ლოკალური დეველოპმენტისთვის
-              targetUrl = \`\${window.location.origin}/shop/product/\${productId}/\`;
-            }
-            
-            console.log('გადამისამართება URL-ზე:', targetUrl);
-            window.location.href = targetUrl;
-          }
-        }
-      }
-    }, true);
-    
     // მარშრუტიზაციის ლოგიკა პროდუქტის გვერდებისთვის
     if (window.location.pathname.includes('/shop/product/') || 
         window.location.pathname.includes('/shop/shop/product/')) {

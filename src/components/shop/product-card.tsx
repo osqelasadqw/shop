@@ -35,24 +35,18 @@ export function ProductCard({ product, loading = false, specialBadge = false, is
     // შევინახოთ პროდუქტის ID localStorage-ში
     if (typeof window !== 'undefined') {
       localStorage.setItem('currentProductId', product.id);
-      console.log('პროდუქტის ID შენახულია:', product.id);
       
-      // გავასწოროთ URL-ის გენერირების ლოგიკა
-      const base = window.location.origin;
-      let productUrl;
+      // გამოვიყენოთ Next.js როუტერი ნავიგაციისთვის
+      // შევამოწმოთ ვართ თუ არა GitHub Pages-ზე (ეს გავლენას ახდენს როუტზე)
+      const isGitHubPages = window.location.origin.includes('github.io');
       
-      // გითჰაბ გვერდზე უნდა გადამისამართდეს /shop/shop/product/ გზაზე
-      // გავამარტივოთ ლოგიკა და გამოვიყენოთ უფრო სანდო მეთოდი
-      if (base.includes('github.io')) {
-        // github pages გარემოსთვის
-        productUrl = `${base}/shop/shop/product/${product.id}/`;
+      if (isGitHubPages) {
+        // GitHub Pages გარემოსთვის
+        router.push(`/shop/product/${product.id}`);
       } else {
-        // ლოკალური დეველოპმენტისთვის ან სხვა გარემოსთვის
-        productUrl = `${base}/shop/product/${product.id}/`;
+        // ლოკალური დეველოპმენტისთვის
+        router.push(`/shop/product/${product.id}`);
       }
-      
-      console.log('გადამისამართება URL-ზე:', productUrl);
-      window.location.href = productUrl;
     }
   };
 

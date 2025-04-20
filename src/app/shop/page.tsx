@@ -130,6 +130,23 @@ export default function ShopPage() {
     fetchInitialData();
   }, [categoryId]);
 
+  // დავამატოთ პროდუქტის პარამეტრის მართვა URL-დან (404.html-დან გადამისამართებისთვის)
+  useEffect(() => {
+    // შევამოწმოთ URL-ში არის თუ არა პროდუქტის პარამეტრი
+    if (typeof window !== 'undefined') {
+      const searchParams = new URLSearchParams(window.location.search);
+      const productId = searchParams.get('product');
+      
+      if (productId) {
+        console.log('ნაპოვნია პროდუქტის ID URL-ში:', productId);
+        localStorage.setItem('currentProductId', productId);
+        
+        // გადავამისამართოთ პროდუქტის გვერდზე
+        router.push(`/shop/product/${productId}`);
+      }
+    }
+  }, [router]);
+
   const allFilteredProducts = products
     .filter(product => {
       const priceCondition = userModifiedRange 

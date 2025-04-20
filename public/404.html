@@ -13,26 +13,30 @@
         console.log('404 გვერდზე ვართ, გზა:', path);
         
         // შევამოწმოთ, თუ პირდაპირ პროდუქტის გვერდზე ვართ შესული
-        // და მისამართი სწორია (/shop/product/...), არაფერი არ ვქნათ.
-        // Next.js-ის როუტერი თავად მოაგვარებს.
+        // და მისამართი სწორია, მაშინ გადავამისამართოთ index.html-ზე
+        // რათა Next.js-მა შეძლოს მარშრუტიზაცია
         const productPattern = /^\/shop\/product\/[^\/]+\/?$/;
         const alternateProductPattern = /^\/shop\/shop\/product\/[^\/]+\/?$/;
         
         if (productPattern.test(path) || alternateProductPattern.test(path)) {
-          console.log('404: სწორი პროდუქტის გვერდის მისამართია, არ ვამისამართებთ.');
-          // სურვილისამებრ, შეგვიძლია localStorage-ში ID შევინახოთ, თუ კლიენტი ამას ელოდება
+          console.log('404: პროდუქტის გვერდის მისამართია:', path);
+          
+          // ამოვიღოთ პროდუქტის ID
           const match = path.match(/\/product\/([^\/]+)/);
           if (match && match[1]) {
-             localStorage.setItem('currentProductId', match[1]);
-             console.log('ID შენახულია:', match[1]);
+             const productId = match[1];
+             localStorage.setItem('currentProductId', productId);
+             console.log('ID შენახულია:', productId);
+             
+             // გადავამისამართოთ index.html-ზე შენახული ID-ით
+             window.location.href = origin + basePath + '/?product=' + productId;
+             return;
           }
-          return; // გავაჩეროთ სკრიპტი
         }
         
-        // თუ მისამართი არასწორია, გადავამისამართოთ მთავარ /shop/ გვერდზე.
-        // იქიდან Next.js როუტერი გააგრძელებს მუშაობას.
+        // თუ მისამართი სხვა არის, გადავამისამართოთ მთავარ გვერდზე
         console.log('404: არასწორი მისამართი, გადამისამართება /shop/-ზე:', path);
-        window.location.replace(origin + basePath + '/');
+        window.location.href = origin + basePath + '/';
       })();
     </script>
     <!-- მეტა განახლება წავშალოთ ან დავაკომენტაროთ, რადგან სკრიპტი აკეთებს გადამისამართებას -->

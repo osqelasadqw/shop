@@ -245,6 +245,16 @@ export default function ProductDetailClient({ id: routeId }: { id?: string }) {
     }
   }, [product]);
 
+  // დავამატოთ ფუნქცია მონათესავე პროდუქტებზე ნავიგაციისთვის
+  const handleRelatedProductClick = (e: React.MouseEvent, relatedProductId: string) => {
+    e.preventDefault();
+    
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('currentProductId', relatedProductId);
+      router.push(`/shop/product/${relatedProductId}`);
+    }
+  };
+
   if (isLoading) {
     return (
       <ShopLayout>
@@ -461,10 +471,10 @@ export default function ProductDetailClient({ id: routeId }: { id?: string }) {
           </div>
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2 sm:gap-4">
             {sortedRelatedProducts.map((relatedProduct) => (
-              <Link 
-                href={`/shop/product/${relatedProduct.id}`} 
+              <div 
                 key={relatedProduct.id}
-                className="group"
+                className="group cursor-pointer"
+                onClick={(e) => handleRelatedProductClick(e, relatedProduct.id)}
               >
                 <div className="aspect-square rounded-md overflow-hidden bg-white border mb-2 group-hover:shadow-md transition-all flex items-center justify-center">
                   {relatedProduct.images && relatedProduct.images[0] ? (
@@ -491,7 +501,7 @@ export default function ProductDetailClient({ id: routeId }: { id?: string }) {
                 </div>
                 <h3 className="text-sm font-medium text-gray-900 group-hover:text-primary transition-colors">{relatedProduct.name}</h3>
                 <p className="text-sm font-semibold text-gray-900">₾{relatedProduct.price?.toFixed(2)}</p>
-              </Link>
+              </div>
             ))}
           </div>
         </div>
