@@ -11,28 +11,30 @@ const nextConfig = {
   trailingSlash: true,
   reactStrictMode: true,
   
-  // RSC ფაილებთან დაკავშირებული პრობლემების გადაჭრა
+  // გადატანილია ძირითად დონეზე experimental-იდან
   useFileSystemPublicRoutes: false,
-  optimizeFonts: false,
   
-  // აღვარიდოთ თავი RSC-სთან დაკავშირებულ პრობლემებს
+  // გადატანილია ძირითად დონეზე experimental-იდან
+  outputFileTracingExcludes: {
+    '/admin/products/**': [
+      'node_modules/**',
+    ],
+    '/shop/product/**': [
+      'node_modules/**',
+    ],
+  },
+  
+  // შენარჩუნებულია მხოლოდ ვალიდური ექსპერიმენტული პარამეტრები
   experimental: {
-    // ნებისმიერი RSC ჩატვირთვა კლიენტის მხარეს
-    appDir: true,
-    // გამოვრთოთ RSC ფაილების გენერაცია სტატიკური ექსპორტისთვის
-    disableStaticImages: true,
-    // არ შევქმნათ RSC ფაილები სტატიკური ექსპორტისას
-    serverComponentsExternalPackages: [],
-    // ვარკევთ დინამიურ მარშრუტებს
-    outputFileTracingExcludes: {
-      '/admin/products/**': [
-        'node_modules/**',
-      ],
-      '/shop/product/**': [
-        'node_modules/**',
-      ],
+    // ვალიდური პარამეტრების სია Next.js 15.2.4-ისთვის
+    esmExternals: 'loose',
+    serverActions: {
+      allowedOrigins: ['localhost:3000', '127.0.0.1:3000'],
     },
   },
+  
+  // გადატანილია experimental-იდან
+  serverExternalPackages: [],
   
   images: {
     domains: [
@@ -69,37 +71,37 @@ const nextConfig = {
     // ავარიდოთ eslint-ს შეცდომის გამოტანა ბილდის დროს
     ignoreDuringBuilds: true,
   },
-  
-  // ბილდის შემდეგ დამატებული ფუნქციონალი
-  onPostBuild: async () => {
-    const fs = require('fs');
-    const path = require('path');
-    
-    // 404.html ფაილის კოპირება
-    try {
-      // შემოწმება არსებობს თუ არა public/404.html
-      if (fs.existsSync(path.join(process.cwd(), 'public', '404.html'))) {
-        // წაკითხვა
-        const content = fs.readFileSync(
-          path.join(process.cwd(), 'public', '404.html'),
-          'utf8'
-        );
-        
-        // დაწერა out/404.html გზაზე
-        fs.writeFileSync(
-          path.join(process.cwd(), 'out', '404.html'),
-          content,
-          'utf8'
-        );
-        
-        console.log('✅ 404.html ფაილი წარმატებით დაკოპირდა out დირექტორიაში');
-      } else {
-        console.warn('⚠️ public/404.html ფაილი ვერ მოიძებნა');
-      }
-    } catch (error) {
-      console.error('❌ 404.html ფაილის კოპირების შეცდომა:', error);
-    }
-  },
 };
+
+// onPostBuild ფუნქციონალი გადატანილია ცალკე, რადგან ეს არ არის Next.js-ის ნაწილი
+const fs = require('fs');
+const path = require('path');
+
+// შევასრულოთ postBuild ფუნქცია ცალკე, არა next.config.js-ის ნაწილად
+if (typeof require !== 'undefined' && require.main === module) {
+  try {
+    // შემოწმება არსებობს თუ არა public/404.html
+    if (fs.existsSync(path.join(process.cwd(), 'public', '404.html'))) {
+      // წაკითხვა
+      const content = fs.readFileSync(
+        path.join(process.cwd(), 'public', '404.html'),
+        'utf8'
+      );
+      
+      // დაწერა out/404.html გზაზე
+      fs.writeFileSync(
+        path.join(process.cwd(), 'out', '404.html'),
+        content,
+        'utf8'
+      );
+      
+      console.log('✅ 404.html ფაილი წარმატებით დაკოპირდა out დირექტორიაში');
+    } else {
+      console.warn('⚠️ public/404.html ფაილი ვერ მოიძებნა');
+    }
+  } catch (error) {
+    console.error('❌ 404.html ფაილის კოპირების შეცდომა:', error);
+  }
+}
 
 module.exports = nextConfig; 
