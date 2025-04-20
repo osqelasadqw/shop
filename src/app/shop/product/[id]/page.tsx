@@ -1,3 +1,5 @@
+'use client';
+
 import ProductDetailClient from './client';
 
 // სტატიკური გვერდი პროდუქტის დეტალებისთვის
