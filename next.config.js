@@ -2,14 +2,14 @@
 
 const nextConfig = {
   // სტატიკური ექსპორტის ჩართვა GitHub Pages-ისთვის
-  // output: "export", 
+  output: "export", 
   // განვსაზღვროთ საიტის ბილდის დირექტორია
-  // distDir: 'out',
+  distDir: 'out',
   
   // განვაახლოთ GitHub Pages-ისთვის - 'shop' არის რეპოზიტორიის სახელი
-  // basePath: '/shop',
-  // assetPrefix: '/shop',
-  // trailingSlash: true,
+  basePath: '/shop',
+  assetPrefix: '/shop',
+  trailingSlash: true,
   reactStrictMode: true,
   
   // ჩავრთოთ ფაილური სისტემის რუტები
@@ -81,6 +81,14 @@ const path = require('path');
 // შევასრულოთ postBuild ფუნქცია ცალკე, არა next.config.js-ის ნაწილად
 if (typeof require !== 'undefined' && require.main === module) {
   try {
+    // შევქმნათ out დირექტორია თუ არ არსებობს
+    if (!fs.existsSync('out')) {
+      fs.mkdirSync('out', { recursive: true });
+    }
+
+    // შევქმნათ .nojekyll ფაილი
+    fs.writeFileSync('out/.nojekyll', '');
+
     // შემოწმება არსებობს თუ არა public/404.html
     if (fs.existsSync(path.join(process.cwd(), 'public', '404.html'))) {
       // წაკითხვა
