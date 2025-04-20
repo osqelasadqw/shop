@@ -1,4 +1,4 @@
-import ProductClient from './client';
+import ProductDetailClient from './client';
 
 // სტატიკური გვერდი პროდუქტის დეტალებისთვის
 export function generateStaticParams() {
@@ -14,5 +14,5 @@ export function generateStaticParams() {
 
 export default function ProductPage({ params }: { params: { id: string } }) {
   // დავაბრუნოთ პროდუქტის დეტალური კლიენტის კომპონენტი ID-ის გადაცემით
-  return <ProductClient id={params.id} />;
+  return <ProductDetailClient id={params.id} />;
 }

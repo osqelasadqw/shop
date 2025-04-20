@@ -81,14 +81,6 @@ const path = require('path');
 // შევასრულოთ postBuild ფუნქცია ცალკე, არა next.config.js-ის ნაწილად
 if (typeof require !== 'undefined' && require.main === module) {
   try {
-    // შევქმნათ out დირექტორია თუ არ არსებობს
-    if (!fs.existsSync('out')) {
-      fs.mkdirSync('out', { recursive: true });
-    }
-
-    // შევქმნათ .nojekyll ფაილი
-    fs.writeFileSync('out/.nojekyll', '');
-
     // შემოწმება არსებობს თუ არა public/404.html
     if (fs.existsSync(path.join(process.cwd(), 'public', '404.html'))) {
       // წაკითხვა
