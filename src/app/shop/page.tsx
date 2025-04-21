@@ -147,8 +147,15 @@ export default function ShopPage() {
       if (productId) {
         console.log('ნაპოვნია პროდუქტის ID URL-ში ან hash-ში:', productId);
         
-        // გადავამისამართოთ დინამიურ პროდუქტის გვერდზე
-        router.push(`/shop/product/${productId}`);
+        // Check if we're running on GitHub Pages
+        if (window.location.hostname.includes('github.io')) {
+          // GitHub Pages approach: use localStorage + static page
+          localStorage.setItem('currentProductId', productId);
+          window.location.href = `${window.location.origin}/shop/static-product`;
+        } else {
+          // Normal Next.js approach: use dynamic routing
+          router.push(`/shop/product/${productId}`);
+        }
       }
     }
   }, [router]);

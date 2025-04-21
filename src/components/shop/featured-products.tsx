@@ -14,7 +14,15 @@ export function FeaturedProducts({ products }: FeaturedProductsProps) {
   const router = useRouter();
 
   const handleProductClick = (productId: string) => {
-    router.push(`/shop/product/${productId}`);
+    // Check if we're running on GitHub Pages
+    if (typeof window !== 'undefined' && window.location.hostname.includes('github.io')) {
+      // GitHub Pages approach: use localStorage + static page
+      localStorage.setItem('currentProductId', productId);
+      window.location.href = `${window.location.origin}/shop/static-product`;
+    } else {
+      // Normal Next.js approach: use dynamic routing
+      router.push(`/shop/product/${productId}`);
+    }
   };
 
   return (

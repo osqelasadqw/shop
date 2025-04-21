@@ -32,9 +32,15 @@ export function ProductCard({ product, loading = false, specialBadge = false, is
   const handleProductClick = (e: React.MouseEvent) => {
     e.preventDefault();
     
-    // Instead of using localStorage and redirecting to static page,
-    // use router to navigate to the dynamic product page
-    router.push(`/shop/product/${product.id}`);
+    // Check if we're running on GitHub Pages
+    if (typeof window !== 'undefined' && window.location.hostname.includes('github.io')) {
+      // GitHub Pages approach: use localStorage + static page
+      localStorage.setItem('currentProductId', product.id);
+      window.location.href = `${window.location.origin}/shop/static-product`;
+    } else {
+      // Normal Next.js approach: use dynamic routing
+      router.push(`/shop/product/${product.id}`);
+    }
   };
 
   // Default image if no images are available
