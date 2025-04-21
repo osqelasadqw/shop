@@ -4,21 +4,27 @@ import { getProductById, getProducts } from '@/lib/firebase-service';
 
 // Generate static params for static export
 export async function generateStaticParams() {
+  // მნიშვნელოვანი: ყველა ცნობილი ID-ის ჩართვა, რომელიც გვჭირდება
+  const knownProductIds = [
+    'CyPeQlm4lKBCy4p3IyPI',
+    'Kz6AhKS52Cj3G4zCxINi',
+    'rkVZ1tYjku6SSjRXLIpw',
+    'sample1', 'sample2', 'sample3',
+  ];
+  
   try {
     // Get all products to generate static paths
     const products = await getProducts();
-    return products.map(product => ({
-      id: product.id
-    }));
+    const productIds = products.map(product => product.id);
+    
+    // გავაერთიანოთ ორივე სია და გავფილტროთ დუბლიკატები
+    const allIds = [...new Set([...knownProductIds, ...productIds])];
+    
+    return allIds.map(id => ({ id }));
   } catch (error) {
     console.error('Error generating static params:', error);
-    // Fallback to minimal list if fetching fails
-    return [
-      { id: 'CyPeQlm4lKBCy4p3IyPI' },
-      { id: 'Kz6AhKS52Cj3G4zCxINi' },
-      { id: 'rkVZ1tYjku6SSjRXLIpw' },
-      { id: 'sample1' }, { id: 'sample2' }, { id: 'sample3' },
-    ];
+    // Return our known product IDs if we can't fetch from the database
+    return knownProductIds.map(id => ({ id }));
   }
 }
 
