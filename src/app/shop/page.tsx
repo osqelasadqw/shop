@@ -146,16 +146,10 @@ export default function ShopPage() {
       
       if (productId) {
         console.log('ნაპოვნია პროდუქტის ID URL-ში ან hash-ში:', productId);
+        localStorage.setItem('currentProductId', productId);
         
-        // Check if we're running on GitHub Pages
-        if (window.location.hostname.includes('github.io')) {
-          // GitHub Pages approach: use localStorage + static page
-          localStorage.setItem('currentProductId', productId);
-          window.location.href = `${window.location.origin}/shop/static-product`;
-        } else {
-          // Normal Next.js approach: use dynamic routing
-          router.push(`/shop/product/${productId}`);
-        }
+        // გადავამისამართოთ სტატიკურ პროდუქტის გვერდზე
+        window.location.href = `${window.location.origin}/shop/static-product`;
       }
     }
   }, [router]);

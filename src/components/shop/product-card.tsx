@@ -32,14 +32,15 @@ export function ProductCard({ product, loading = false, specialBadge = false, is
   const handleProductClick = (e: React.MouseEvent) => {
     e.preventDefault();
     
-    // Check if we're running on GitHub Pages
-    if (typeof window !== 'undefined' && window.location.hostname.includes('github.io')) {
-      // GitHub Pages approach: use localStorage + static page
+    // შევინახოთ პროდუქტის ID localStorage-ში
+    if (typeof window !== 'undefined') {
       localStorage.setItem('currentProductId', product.id);
+      
+      // შევამოწმოთ ვართ თუ არა GitHub Pages-ზე 
+      const isGitHubPages = window.location.origin.includes('github.io');
+      
+      // ყველა შემთხვევაში მივმართავთ სტატიკურ პროდუქტის გვერდზე
       window.location.href = `${window.location.origin}/shop/static-product`;
-    } else {
-      // Normal Next.js approach: use dynamic routing
-      router.push(`/shop/product/${product.id}`);
     }
   };
 
