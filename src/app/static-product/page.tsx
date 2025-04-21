@@ -46,223 +46,29 @@ const disablePrefetchForGitHubPages = () => {
     const isGitHubPages = window.location.hostname.includes('github.io');
     
     if (isGitHubPages) {
-      // 1. TOTAL CONSOLE SUPPRESSION
-      // Immediately clear console to remove any existing errors
-      console.clear();
-      
-      // 2. DIRECT, TARGETED FIX FOR THE SPECIFIC ERROR
-      // Directly target the exact error URL causing the issue
-      const PROBLEM_URL = "/shop/shop/product/0s6osYbIE1RlQGgzi6ky/index.txt?_rsc=2eev6";
-      const PROBLEM_CHUNK = "1684-aa8cfb5e644bdf89.js";
-      
-      // Add specific handler for this problematic URL pattern
-      // Override fetch API completely for specific URL patterns
-      const realFetch = window.fetch;
-      window.fetch = function(resource, init) {
-        const isRequestBlocked = () => {
-          // Convert the request to a string to simplify matching
-          let url = '';
-          if (typeof resource === 'string') {
-            url = resource;
-          } else if (resource instanceof URL) {
-            url = resource.href;
-          } else if (resource instanceof Request) {
-            url = resource.url;
-          }
-          
-          // Block these specific patterns that are causing the errors
-          return (
-            // Block the exact problem URL
-            url.includes(PROBLEM_URL) || 
-            // Block any similar product URL patterns with .txt or _rsc
-            (url.includes('/shop/product/') && 
-             (url.includes('.txt') || url.includes('?_rsc='))) ||
-            // Block the problematic chunk file
-            url.includes(PROBLEM_CHUNK) ||
-            // Block any double /shop/shop/ paths
-            url.includes('/shop/shop/')
-          );
-        };
-        
-        // If this is a blocked URL, return an empty successful response
-        if (isRequestBlocked()) {
-          return Promise.resolve(new Response('{}', { 
-            status: 200, 
-            headers: { 'Content-Type': 'application/json' }
-          }));
+      // Attempt to patch the prefetch mechanism
+      const originalPush = window.history.pushState;
+      window.history.pushState = function() {
+        try {
+          return originalPush.apply(this, arguments as any);
+        } catch (e) {
+          console.debug('Prevented prefetch error:', e);
+          return;
         }
-        
-        // Otherwise, proceed with the real fetch
-        return realFetch(resource, init);
       };
       
-      // 3. SPECIFICALLY TARGET INTERSECTION OBSERVER ROOTMARGIN
-      // Next.js uses IntersectionObserver with specific rootMargin values for prefetching
-      const realIntersectionObserver = window.IntersectionObserver;
-      Object.defineProperty(window, 'IntersectionObserver', {
-        writable: true,
-        configurable: true,
-        value: function(callback: IntersectionObserverCallback, options?: IntersectionObserverInit) {
-          // This specific rootMargin pattern is used by Next.js prefetcher
-          if (options && options.rootMargin && 
-             (options.rootMargin.includes('200px') || options.rootMargin.includes('450px'))) {
-            
-            // Return a dummy observer that does nothing
-            return {
-              observe: function() {},
-              unobserve: function() {},
-              disconnect: function() {},
-              takeRecords: function() { return []; },
-              root: null,
-              rootMargin: '0px',
-              thresholds: [0]
-            };
-          }
-          
-          // For all other IntersectionObserver uses, create a real instance
-          return new realIntersectionObserver(callback, options);
+      // Intercept fetch calls to prevent 404 errors on .txt files
+      const originalFetch = window.fetch;
+      window.fetch = function(input: RequestInfo | URL, init?: RequestInit) {
+        // If the URL is a .txt file on GitHub Pages, don't fetch it
+        if (typeof input === 'string' && 
+            input.includes('.txt') && 
+            input.includes('github.io')) {
+          console.debug('Prevented fetch for:', input);
+          return Promise.resolve(new Response('{}', { status: 200 }));
         }
-      });
-      
-      // 4. Prevent errors from showing in console
-      const originalConsoleError = console.error;
-      console.error = function(...args) {
-        if (args[0] && typeof args[0] === 'string') {
-          const msg = args[0].toString();
-          // Block all product fetch errors
-          if (msg.includes("product") || 
-              msg.includes("404") || 
-              msg.includes(".txt") ||
-              msg.includes("?_rsc=") ||
-              msg.includes(PROBLEM_CHUNK)) {
-            return; // Silently ignore
-          }
-        }
-        originalConsoleError.apply(console, args);
+        return originalFetch(input, init);
       };
-      
-      // Suppress console errors completely 
-      const originalConsoleWarn = console.warn;
-      console.warn = function(...args) {
-        if (args[0] && typeof args[0] === 'string') {
-          const msg = args[0].toString();
-          // Block common CSS warnings and third-party cookie warnings
-          if (msg.includes("preload") || 
-              msg.includes("css") || 
-              msg.includes("was not used") ||
-              msg.includes("third-party") ||
-              msg.includes("cookie")) {
-            return; // Silently ignore
-          }
-        }
-        originalConsoleWarn.apply(console, args);
-      };
-
-      // Hide any resource errors from the Error event
-      window.addEventListener('error', function(e) {
-        // Block all network-related errors
-        if (e.filename && (
-            e.filename.includes('/product/') || 
-            e.filename.includes('.txt') || 
-            e.filename.includes('?_rsc=') ||
-            e.filename.includes('_next/static') ||
-            e.filename.includes('shop/shop'))) {
-          e.preventDefault();
-          e.stopPropagation();
-          return true;
-        }
-        
-        // Also check if it's a script/resource loading error
-        if (e.target && (e.target instanceof HTMLScriptElement || 
-                        e.target instanceof HTMLLinkElement || 
-                        e.target instanceof HTMLImageElement)) {
-          e.preventDefault();
-          e.stopPropagation();
-          return true;
-        }
-      }, true);
-      
-      // Suppress unhandled promise rejections too
-      window.addEventListener('unhandledrejection', function(e) {
-        // Any promise rejection related to fetching
-        if (e.reason && (
-            e.reason.toString().includes('/product/') ||
-            e.reason.toString().includes('.txt') ||
-            e.reason.toString().includes('?_rsc=') ||
-            e.reason.toString().includes('404') ||
-            e.reason.toString().includes('shop/shop'))) {
-          e.preventDefault();
-          e.stopPropagation();
-          return true;
-        }
-      }, true);
-      
-      // Also completely disable all debug output to keep console clean
-      if (!window.location.href.includes('debug=true')) {
-        console.debug = function() { /* Silent */ };
-      }
-      
-      // Set a timer to clear console after loading
-      setTimeout(() => {
-        console.clear();
-        // This clears all errors and prints a friendly message instead
-        console.log('%c✅ გვერდი ჩაიტვირთა წარმატებით - ყველა შეცდომა გაიფილტრა', 'color: green; font-weight: bold;');
-      }, 2000);
-      
-      // Hide all Next.js specific error overlays
-      if (typeof window !== 'undefined') {
-        // @ts-ignore - Next.js internal property
-        window.__NEXT_DATA__ = window.__NEXT_DATA__ || {};
-        // @ts-ignore - Next.js internal property
-        window.__NEXT_DATA__.err = null;
-        
-        // This prevents Next.js from showing error overlays
-        // @ts-ignore - Next.js internal
-        window.__NEXT_ERROR_OVERLAY_SOCKET_CONNECTED = true;
-        
-        // This prevents any error reporting back to Next.js
-        // @ts-ignore - Next.js internal
-        window.__NEXT_HAS_REPORTED_ERROR = true;
-        
-        // Block the specific next.js chunk file mentioned in the error
-        // This is 1684-aa8cfb5e644bdf89.js which appears to be causing the issues
-        const blockList = ['1684-aa8cfb5e644bdf89.js'];
-        
-        // Immediately run a check for any script with this src
-        document.querySelectorAll('script').forEach(scriptEl => {
-          const src = scriptEl.getAttribute('src') || '';
-          if (blockList.some(item => src.includes(item))) {
-            console.debug('Blocked problematic script:', src);
-            // Replace with a dummy script that does nothing
-            scriptEl.removeAttribute('src');
-            scriptEl.textContent = '/* Blocked by error prevention */';
-          }
-        });
-        
-        // Watch for any future scripts being added
-        const scriptObserver = new MutationObserver((mutations) => {
-          mutations.forEach((mutation) => {
-            if (mutation.addedNodes) {
-              mutation.addedNodes.forEach((node) => {
-                if (node.nodeName === 'SCRIPT' && node instanceof HTMLScriptElement) {
-                  const src = node.getAttribute('src') || '';
-                  if (blockList.some(item => src.includes(item))) {
-                    console.debug('Prevented loading of problematic script:', src);
-                    node.removeAttribute('src');
-                    node.textContent = '/* Blocked by error prevention */';
-                  }
-                }
-              });
-            }
-          });
-        });
-        
-        // Start observing for scripts in the entire document
-        scriptObserver.observe(document.documentElement, { 
-          childList: true, 
-          subtree: true 
-        });
-      }
     }
   }
 };
@@ -340,13 +146,6 @@ export default function StaticProductPage() {
     };
     
     window.addEventListener('unhandledrejection', handleUnhandledRejection);
-
-    // Clear the console to remove any previous errors
-    if (typeof window !== 'undefined' && window.location.hostname.includes('github.io')) {
-      setTimeout(() => {
-        console.clear();
-      }, 2000);
-    }
 
     return () => {
       window.removeEventListener('error', handleError as any);
@@ -514,23 +313,9 @@ export default function StaticProductPage() {
   };
 
   // ვამზადებთ უკან დასაბრუნებელ URL-ს
-  const backToShopUrl = (() => {
-    if (typeof window !== 'undefined') {
-      const isGitHubPages = window.location.hostname.includes('github.io');
-      if (isGitHubPages) {
-        // GitHub Pages-ზე გამოვიყენოთ აბსოლუტური მისამართი
-        return 'https://osqelasadqw.github.io/shop/';
-      }
-    }
-    return '/shop';
-  })();
-  
-  // კონსოლში დავლოგოთ დებაგისთვის
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      console.debug('backToShopUrl:', backToShopUrl);
-    }
-  }, [backToShopUrl]);
+  const backToShopUrl = typeof window !== 'undefined' && window.location.origin.includes('github.io')
+    ? `${window.location.origin}/shop`
+    : '/shop';
 
   const openImageModal = (index: number) => {
     setModalImageIndex(index);
@@ -575,7 +360,7 @@ export default function StaticProductPage() {
       // Force a full page load instead of client-side navigation
       const isGitHubPages = window.location.hostname.includes('github.io');
       if (isGitHubPages) {
-        window.location.href = 'https://osqelasadqw.github.io/shop/static-product';
+        window.location.href = `${window.location.origin}/shop/static-product`;
       } else {
         router.push('/static-product');
       }

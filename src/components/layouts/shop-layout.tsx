@@ -75,18 +75,12 @@ export function ShopLayout({ children }: ShopLayoutProps) {
     };
   }, [searchTerm, router]); // Depend on searchTerm and router
 
-  const navItems = React.useMemo(() => {
-    // Check if we're on GitHub Pages
-    const isGitHubPages = typeof window !== 'undefined' && window.location.hostname.includes('github.io');
-    const baseUrl = isGitHubPages ? 'https://osqelasadqw.github.io' : '';
-    
-    return [
-      { href: `${baseUrl}/shop`, label: 'მთავარი' },
-      { href: `${baseUrl}/shop/categories`, label: 'კატეგორიები' },
-      { href: `${baseUrl}/shop/about`, label: 'ჩვენს შესახებ' },
-      { href: `${baseUrl}/shop/promo-checker`, label: 'პრომოკოდები' },
-    ];
-  }, []);
+  const navItems = [
+    { href: '/shop', label: 'მთავარი' },
+    { href: '/shop/categories', label: 'კატეგორიები' },
+    { href: '/shop/about', label: 'ჩვენს შესახებ' },
+    { href: '/shop/promo-checker', label: 'პრომოკოდები' },
+  ];
 
   useEffect(() => {
     const loadSettings = async () => {
@@ -172,15 +166,9 @@ export function ShopLayout({ children }: ShopLayoutProps) {
             {/* მთავარი ნავიგაცია */}
             <div className="flex justify-between items-center">
               <div className="flex items-center space-x-6">
-                {typeof window !== 'undefined' && window.location.hostname.includes('github.io') ? (
-                  <Link href="https://osqelasadqw.github.io/shop/" className="text-xl font-bold tracking-tight">
-                    OnLyne Store
-                  </Link>
-                ) : (
-                  <Link href="/shop" className="text-xl font-bold tracking-tight">
-                    OnLyne Store
-                  </Link>
-                )}
+                <Link href="/shop" className="text-xl font-bold tracking-tight">
+                  OnLyne Store
+                </Link>
               </div>
               
               {/* Center Search - დესკტოპი */}
@@ -318,23 +306,16 @@ export function ShopLayout({ children }: ShopLayoutProps) {
                   {isLoading ? (
                     <div className="text-xs text-gray-500">იტვირთება...</div>
                   ) : categories.length > 0 ? (
-                    categories.map((category) => {
-                      const isGitHubPages = typeof window !== 'undefined' && window.location.hostname.includes('github.io');
-                      const href = isGitHubPages 
-                        ? `https://osqelasadqw.github.io/shop?category=${category.id}` 
-                        : `/shop?category=${category.id}`;
-                      
-                      return (
-                        <Link
-                          key={category.id}
-                          href={href}
-                          onClick={() => setIsMenuOpen(false)}
-                          className="block text-xs xs:text-sm py-1 px-2 border rounded-md text-center text-muted-foreground hover:text-primary hover:border-primary transition-colors"
-                        >
-                          {category.name}
-                        </Link>
-                      );
-                    })
+                    categories.map((category) => (
+                      <Link
+                        key={category.id}
+                        href={`/shop?category=${category.id}`}
+                        onClick={() => setIsMenuOpen(false)}
+                        className="block text-xs xs:text-sm py-1 px-2 border rounded-md text-center text-muted-foreground hover:text-primary hover:border-primary transition-colors"
+                      >
+                        {category.name}
+                      </Link>
+                    ))
                   ) : (
                     <div className="text-xs text-gray-500">კატეგორიები არ მოიძებნა</div>
                   )}
@@ -387,25 +368,13 @@ export function ShopLayout({ children }: ShopLayoutProps) {
               <h3 className="text-lg font-bold mb-4">სწრაფი ბმულები</h3>
               <ul className="space-y-2">
                 <li>
-                  {typeof window !== 'undefined' && window.location.hostname.includes('github.io') ? (
-                    <Link href="https://osqelasadqw.github.io/shop/" className="text-gray-400 hover:text-primary">მთავარი</Link>
-                  ) : (
-                    <Link href="/shop" className="text-gray-400 hover:text-primary">მთავარი</Link>
-                  )}
+                  <Link href="/shop" className="text-gray-400 hover:text-primary">მთავარი</Link>
                 </li>
                 <li>
-                  {typeof window !== 'undefined' && window.location.hostname.includes('github.io') ? (
-                    <Link href="https://osqelasadqw.github.io/shop/cart" className="text-gray-400 hover:text-primary">კალათა</Link>
-                  ) : (
-                    <Link href="/shop/cart" className="text-gray-400 hover:text-primary">კალათა</Link>
-                  )}
+                  <Link href="/shop/cart" className="text-gray-400 hover:text-primary">კალათა</Link>
                 </li>
                 <li>
-                  {typeof window !== 'undefined' && window.location.hostname.includes('github.io') ? (
-                    <Link href="https://osqelasadqw.github.io/shop/about" className="hover:text-primary text-sm">ჩვენს შესახებ</Link>
-                  ) : (
-                    <Link href="/shop/about" className="hover:text-primary text-sm">ჩვენს შესახებ</Link>
-                  )}
+                  <Link href="/shop/about" className="hover:text-primary text-sm">ჩვენს შესახებ</Link>
                 </li>
               </ul>
             </div>
