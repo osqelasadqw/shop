@@ -81,9 +81,31 @@ const disablePrefetchForGitHubPages = () => {
       window.fetch = function(input: RequestInfo | URL, init?: RequestInit) {
         const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input instanceof Request ? input.url : '';
         
+        // Fix double shop path issue - convert /shop/shop/ to /shop/
+        if (url && url.includes('/shop/shop/')) {
+          const fixedUrl = url.replace('/shop/shop/', '/shop/');
+          console.debug('Fixed double shop path in URL:', url, '→', fixedUrl);
+          
+          // If it's a string, we can directly return the fixed URL
+          if (typeof input === 'string') {
+            return originalFetch(fixedUrl, init);
+          }
+          // If it's a Request object, we need to create a new one
+          else if (input instanceof Request) {
+            const newRequest = new Request(fixedUrl, input);
+            return originalFetch(newRequest, init);
+          }
+          // For URL objects
+          else if (input instanceof URL) {
+            const newUrl = new URL(fixedUrl);
+            return originalFetch(newUrl, init);
+          }
+        }
+        
         // Directly block any problematic requests
         if (url && (
-            url.includes('/product/') && (url.includes('.txt') || url.includes('?_rsc=')) ||
+            (url.includes('/product/') || url.includes('/shop/product/')) && 
+            (url.includes('.txt') || url.includes('?_rsc=')) ||
             url.includes('_buildManifest') ||
             url.includes('_ssgManifest') ||
             url.includes('build-manifest') ||
@@ -134,17 +156,36 @@ const disablePrefetchForGitHubPages = () => {
         if (!target) return;
         const link = target as HTMLAnchorElement;
         
+        // Fix double shop paths
+        if (link.href && link.href.includes('/shop/shop/')) {
+          e.preventDefault();
+          const fixedHref = link.href.replace('/shop/shop/', '/shop/');
+          console.debug('Fixed double shop path in link:', link.href, '→', fixedHref);
+          link.href = fixedHref;
+          // Let the click continue with the corrected URL
+          link.click();
+          return;
+        }
+        
         // If it's a product link that would cause errors
-        if (link.href && link.href.includes('/product/')) {
+        if (link.href && (link.href.includes('/product/') || link.href.includes('/shop/product/'))) {
           e.preventDefault();
           console.debug('Intercepted navigation to product:', link.href);
           
-          // Extract the product ID and use our safe navigation method 
-          const productIdMatch = link.href.match(/\/product\/([^/]+)/);
+          // Extract the product ID using a more robust pattern
+          // This handles both /product/ID and /shop/product/ID patterns
+          const productIdMatch = link.href.match(/\/(?:shop\/)?product\/([^/?&#]+)/);
           if (productIdMatch && productIdMatch[1]) {
+            const productId = productIdMatch[1];
+            console.debug('Extracted product ID:', productId);
+            
             if (typeof localStorage !== 'undefined') {
-              localStorage.setItem('currentProductId', productIdMatch[1]);
-              window.location.href = '/shop/static-product';
+              localStorage.setItem('currentProductId', productId);
+              
+              // Use correct path based on deployment environment
+              const isGitHubPages = window.location.hostname.includes('github.io');
+              const targetPath = isGitHubPages ? '/shop/static-product' : '/static-product';
+              window.location.href = targetPath;
             }
           }
         }
@@ -221,10 +262,21 @@ const disablePrefetchForGitHubPages = () => {
       const originalOpen = XMLHttpRequest.prototype.open;
       // @ts-ignore - Overriding browser API for prefetch prevention
       XMLHttpRequest.prototype.open = function(method, url, ...rest) {
-        if (typeof url === 'string' && 
-            (url.includes('.txt') || url.includes('?_rsc=')) && 
-            (url.includes('github.io') || url.includes('/shop/'))) {
-          console.debug('Prevented XHR for:', url);
+        // Fix double shop paths
+        if (typeof url === 'string' && url.includes('/shop/shop/')) {
+          const fixedUrl = url.replace('/shop/shop/', '/shop/');
+          console.debug('Fixed double shop path in XHR:', url, '→', fixedUrl);
+          // @ts-ignore - Type safety for rest parameters
+          return originalOpen.call(this, method, fixedUrl, ...rest);
+        }
+        
+        // For blocking problematic URLs, ensure url is a string first
+        const urlStr = typeof url === 'string' ? url : url instanceof URL ? url.toString() : '';
+        if (urlStr && 
+            ((urlStr.includes('/product/') || urlStr.includes('/shop/product/')) && 
+            (urlStr.includes('.txt') || urlStr.includes('?_rsc='))) ||
+            (urlStr.includes('github.io') && urlStr.includes('?_rsc='))) {
+          console.debug('Prevented XHR for:', urlStr);
           // Redirect to a blank response
           // @ts-ignore - Type safety for rest parameters
           return originalOpen.call(this, method, 'data:text/plain,{}', ...rest);
