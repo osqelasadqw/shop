@@ -3,7 +3,7 @@
                   src={p.images[0] || '/placeholder.png'}
                   alt={p.name}
                   fill
-                  className="object-contain transition-transform duration-200 hover:scale-105"
+                  className="object-contain"
                   loading={index < 2 ? "eager" : "lazy"}
                   placeholder="blur"
                   blurDataURL="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII="

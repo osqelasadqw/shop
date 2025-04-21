@@ -134,3 +134,42 @@
     }
   }
 }
+
+/* Product image hover effect - complete rewrite */
+.product-image-hover {
+  transform: scale(1);
+  transition: transform 0.3s ease;
+  will-change: transform;
+}
+
+/* Direct hover only - no group hover */
+.product-image-hover:hover {
+  transform: scale(1.05) !important;
+}
+
+/* Disable any group hover effects */
+*:hover > .product-image-hover:not(:hover),
+.group:hover .product-image-hover:not(:hover),
+.group-hover .product-image-hover:not(:hover) {
+  transform: scale(1) !important;
+}
+
+/* Reset any existing hover effects from Tailwind */
+.group-hover\:scale-105:not(:hover) {
+  transform: scale(1) !important;
+}
+
+/* Additional isolation for hover effects */
+.hover-isolated {
+  isolation: isolate;
+}
+
+.hover-isolated:hover img,
+.hover-isolated img:hover {
+  transform: scale(1.05);
+}
+
+.hover-isolated:not(:hover) img,
+.hover-isolated img:not(:hover) {
+  transform: scale(1);
+}

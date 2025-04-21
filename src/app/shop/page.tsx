@@ -458,7 +458,7 @@ export default function ShopPage() {
               <div>
                 <h2 className="text-xl font-bold mb-4">ყველა პროდუქტი</h2>
                 
-                <div className="relative group">
+                <div className="relative">
                   <style jsx>{`
                     .card-reference {
                       position: absolute;
@@ -558,19 +558,24 @@ export default function ShopPage() {
                                 <SwiperSlide key={product.id}>
                                   <Link 
                                     href={`/shop/product/${product.id}`}
-                                    className="group flex flex-col h-full w-full"
+                                    className="flex flex-col h-full w-full"
                                   >
-                                    <div className="flex-1 flex items-center justify-center relative overflow-hidden min-h-[200px] p-0 pt-0 pb-0">
+                                    <div className="flex-1 flex items-center justify-center relative overflow-hidden min-h-[200px] p-0 pt-0 pb-0 z-0">
                                       <Image
                                         src={productImage}
                                         alt={product.name}
                                         fill
-                                        style={{ objectFit: 'cover', objectPosition: 'center' }}
+                                        style={{ 
+                                          objectFit: 'cover', 
+                                          objectPosition: 'center',
+                                          transition: 'transform 0.5s ease',
+                                          zIndex: 0
+                                        }}
                                         sizes="(max-width: 639px) 100vw, (max-width: 767px) 100vw, (max-width: 1023px) 100vw, (max-width: 1279px) 100vw, 50vw"
                                         priority={index === 0}
                                         placeholder="blur"
                                         blurDataURL="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII="
-                                        className="transition-transform duration-300 group-hover:scale-105"
+                                        className="product-image-hover !pointer-events-auto"
                                       />
                                     </div>
                                     
@@ -609,7 +614,7 @@ export default function ShopPage() {
                           {specialProducts.length > 1 && (
                             <>
                               <button 
-                                className="absolute left-2 top-1/2 transform -translate-y-1/2 z-10 bg-white/80 hover:bg-white rounded-full p-1.5 focus:outline-none shadow-sm"
+                                className="absolute left-2 top-1/2 transform -translate-y-1/2 z-20 bg-white/80 hover:bg-white rounded-full p-1.5 focus:outline-none shadow-sm pointer-events-auto"
                                 onClick={(e) => {
                                   e.preventDefault();
                                   const swiperInstance = (document.querySelector('.special-grid-item .swiper') as any)?.swiper;
@@ -622,7 +627,7 @@ export default function ShopPage() {
                                 <ArrowLeft className="h-4 w-4 text-gray-700" />
                               </button>
                               <button 
-                                className="absolute right-2 top-1/2 transform -translate-y-1/2 z-10 bg-white/80 hover:bg-white rounded-full p-1.5 focus:outline-none shadow-sm"
+                                className="absolute right-2 top-1/2 transform -translate-y-1/2 z-20 bg-white/80 hover:bg-white rounded-full p-1.5 focus:outline-none shadow-sm pointer-events-auto"
                                 onClick={(e) => {
                                   e.preventDefault();
                                   const swiperInstance = (document.querySelector('.special-grid-item .swiper') as any)?.swiper;
@@ -642,7 +647,7 @@ export default function ShopPage() {
                     
                     {filteredProducts.slice(0, 4).map((product) => (
                       <div key={product.id} className="product-grid-item">
-                        <div className="w-full h-full product-card-normal scale-95 xs:scale-90 sm:scale-95">
+                        <div className="w-full h-full product-card-normal scale-95 xs:scale-90 sm:scale-95 hover-isolated">
                           <ProductCard product={product} />
                         </div>
                       </div>
@@ -650,7 +655,7 @@ export default function ShopPage() {
                     
                     {filteredProducts.slice(4).map((product) => (
                       <div key={product.id} className="product-grid-item">
-                        <div className="w-full h-full product-card-normal scale-95 xs:scale-90 sm:scale-95">
+                        <div className="w-full h-full product-card-normal scale-95 xs:scale-90 sm:scale-95 hover-isolated">
                           <ProductCard product={product} />
                         </div>
                       </div>
