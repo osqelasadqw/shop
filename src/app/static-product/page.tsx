@@ -514,9 +514,23 @@ export default function StaticProductPage() {
   };
 
   // ვამზადებთ უკან დასაბრუნებელ URL-ს
-  const backToShopUrl = typeof window !== 'undefined' && window.location.origin.includes('github.io')
-    ? '/shop/'
-    : '/shop';
+  const backToShopUrl = (() => {
+    if (typeof window !== 'undefined') {
+      const isGitHubPages = window.location.hostname.includes('github.io');
+      if (isGitHubPages) {
+        // GitHub Pages-ზე გამოვიყენოთ აბსოლუტური მისამართი
+        return 'https://osqelasadqw.github.io/shop/';
+      }
+    }
+    return '/shop';
+  })();
+  
+  // კონსოლში დავლოგოთ დებაგისთვის
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      console.debug('backToShopUrl:', backToShopUrl);
+    }
+  }, [backToShopUrl]);
 
   const openImageModal = (index: number) => {
     setModalImageIndex(index);
@@ -561,7 +575,7 @@ export default function StaticProductPage() {
       // Force a full page load instead of client-side navigation
       const isGitHubPages = window.location.hostname.includes('github.io');
       if (isGitHubPages) {
-        window.location.href = '/shop/static-product';
+        window.location.href = 'https://osqelasadqw.github.io/shop/static-product';
       } else {
         router.push('/static-product');
       }
