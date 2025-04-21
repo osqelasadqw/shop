@@ -46,6 +46,115 @@ const disablePrefetchForGitHubPages = () => {
     const isGitHubPages = window.location.hostname.includes('github.io');
     
     if (isGitHubPages) {
+      // AGGRESSIVE EARLY INTERCEPTION
+      // Completely override Next.js routing on GitHub Pages
+      // This must run before any resources are loaded
+      console.debug('Running in GitHub Pages environment - applying fixes');
+      
+      // 1. Intercept all script loads to catch scripts before they execute
+      const originalCreateElement = document.createElement;
+      // @ts-ignore - Overriding DOM API
+      document.createElement = function(tagName: string, options?: ElementCreationOptions) {
+        const element = originalCreateElement.call(document, tagName, options);
+        
+        if (tagName.toLowerCase() === 'script') {
+          const originalSetAttribute = element.setAttribute;
+          element.setAttribute = function(name: string, value: string) {
+            // Block loading of any scripts that might cause prefetching
+            if ((name === 'src' || name === 'data-src') && 
+                (value.includes('_next/static') && value.includes('chunk'))) {
+              console.debug('Modifying script load behavior:', value);
+              // Add special attributes to prevent automatic prefetching
+              originalSetAttribute.call(this, 'data-manual-load', 'true');
+              return originalSetAttribute.call(this, name, value);
+            }
+            return originalSetAttribute.call(this, name, value);
+          };
+        }
+        
+        return element;
+      };
+      
+      // 2. Block network requests immediately
+      // More aggressive fetch replacement that catches all requests before they're made
+      const originalFetch = window.fetch;
+      window.fetch = function(input: RequestInfo | URL, init?: RequestInit) {
+        const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input instanceof Request ? input.url : '';
+        
+        // Directly block any problematic requests
+        if (url && (
+            url.includes('/product/') && (url.includes('.txt') || url.includes('?_rsc=')) ||
+            url.includes('_buildManifest') ||
+            url.includes('_ssgManifest') ||
+            url.includes('build-manifest') ||
+            url.includes('require-hook')
+        )) {
+          console.debug('Blocked fetch request:', url);
+          return Promise.resolve(new Response('{}', { status: 200, headers: { 'Content-Type': 'application/json' } }));
+        }
+        
+        return originalFetch(input, init);
+      };
+      
+      // 3. Fix CSS preload warnings
+      const fixCssPreloads = () => {
+        document.querySelectorAll('link[rel="preload"][href*=".css"]').forEach(link => {
+          if (link instanceof HTMLLinkElement && !link.hasAttribute('as')) {
+            link.setAttribute('as', 'style');
+          }
+        });
+      };
+      
+      // Run immediately and also on DOMContentLoaded
+      fixCssPreloads();
+      document.addEventListener('DOMContentLoaded', fixCssPreloads);
+      
+      // 4. Disable all link prefetching
+      const disablePrefetchLinks = () => {
+        // Remove all existing prefetch links
+        document.querySelectorAll('link[rel="prefetch"], link[rel="preconnect"], link[rel="prerender"]').forEach(link => {
+          if (link.parentNode) {
+            link.parentNode.removeChild(link);
+          }
+        });
+      };
+      
+      // Run immediately and on DOMContentLoaded
+      disablePrefetchLinks();
+      document.addEventListener('DOMContentLoaded', disablePrefetchLinks);
+      
+      // 5. Monitor and intercept all navigation
+      const handleClick = (e: MouseEvent) => {
+        // Check if it's a link click
+        let target = e.target as HTMLElement;
+        while (target && target.tagName !== 'A') {
+          target = target.parentElement as HTMLElement;
+        }
+        
+        if (!target) return;
+        const link = target as HTMLAnchorElement;
+        
+        // If it's a product link that would cause errors
+        if (link.href && link.href.includes('/product/')) {
+          e.preventDefault();
+          console.debug('Intercepted navigation to product:', link.href);
+          
+          // Extract the product ID and use our safe navigation method 
+          const productIdMatch = link.href.match(/\/product\/([^/]+)/);
+          if (productIdMatch && productIdMatch[1]) {
+            if (typeof localStorage !== 'undefined') {
+              localStorage.setItem('currentProductId', productIdMatch[1]);
+              window.location.href = '/shop/static-product';
+            }
+          }
+        }
+      };
+      
+      // Add global click handler
+      document.addEventListener('click', handleClick, true);
+      
+      // Also apply our previous fixes
+
       // Fix CSS preload warnings by ensuring proper 'as' attribute
       setTimeout(() => {
         document.querySelectorAll('link[rel="preload"][href*=".css"]').forEach(link => {
@@ -96,7 +205,7 @@ const disablePrefetchForGitHubPages = () => {
       }
       
       // Intercept fetch calls to prevent 404 errors on .txt files
-      const originalFetch = window.fetch;
+      const originalFetch2 = window.fetch;
       window.fetch = function(input: RequestInfo | URL, init?: RequestInit) {
         // If the URL is a .txt file on GitHub Pages, don't fetch it
         if (typeof input === 'string' && 
@@ -105,7 +214,7 @@ const disablePrefetchForGitHubPages = () => {
           console.debug('Prevented fetch for:', input);
           return Promise.resolve(new Response('{}', { status: 200 }));
         }
-        return originalFetch(input, init);
+        return originalFetch2(input, init);
       };
       
       // Also intercept XMLHttpRequest for older code
