@@ -32,16 +32,9 @@ export function ProductCard({ product, loading = false, specialBadge = false, is
   const handleProductClick = (e: React.MouseEvent) => {
     e.preventDefault();
     
-    // შევინახოთ პროდუქტის ID localStorage-ში
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('currentProductId', product.id);
-      
-      // შევამოწმოთ ვართ თუ არა GitHub Pages-ზე 
-      const isGitHubPages = window.location.origin.includes('github.io');
-      
-      // ყველა შემთხვევაში მივმართავთ სტატიკურ პროდუქტის გვერდზე
-      window.location.href = `${window.location.origin}/shop/static-product`;
-    }
+    // Instead of using localStorage and redirecting to static page,
+    // use router to navigate to the dynamic product page
+    router.push(`/shop/product/${product.id}`);
   };
 
   // Default image if no images are available

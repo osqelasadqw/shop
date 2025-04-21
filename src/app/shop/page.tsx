@@ -146,10 +146,9 @@ export default function ShopPage() {
       
       if (productId) {
         console.log('ნაპოვნია პროდუქტის ID URL-ში ან hash-ში:', productId);
-        localStorage.setItem('currentProductId', productId);
         
-        // გადავამისამართოთ სტატიკურ პროდუქტის გვერდზე
-        window.location.href = `${window.location.origin}/shop/static-product`;
+        // გადავამისამართოთ დინამიურ პროდუქტის გვერდზე
+        router.push(`/shop/product/${productId}`);
       }
     }
   }, [router]);
