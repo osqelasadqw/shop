@@ -65,7 +65,7 @@ const disablePrefetchForGitHubPages = () => {
             input.includes('.txt') && 
             input.includes('github.io')) {
           console.debug('Prevented fetch for:', input);
-          return Promise.resolve(new Response('{}', { status: 200 }));
+          return Promise.resolve(new Response(JSON.stringify({}), { status: 200 }));
         }
         return originalFetch(input, init);
       };
