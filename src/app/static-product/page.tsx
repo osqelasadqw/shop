@@ -27,6 +27,7 @@ import 'swiper/css';
 import 'swiper/css/free-mode';
 import 'swiper/css/navigation';
 import 'swiper/css/thumbs';
+import { useRouter } from 'next/navigation';
 
 // Define a cookie consent function to handle privacy compliance
 const setCookieConsent = () => {
@@ -35,6 +36,40 @@ const setCookieConsent = () => {
   if (typeof window !== 'undefined') {
     // Set localStorage instead of cookies (more privacy-friendly)
     localStorage.setItem('cookieConsent', 'true');
+  }
+};
+
+// Helper function to handle Next.js prefetching errors
+const disablePrefetchForGitHubPages = () => {
+  if (typeof window !== 'undefined') {
+    // Check if we are running on GitHub Pages
+    const isGitHubPages = window.location.hostname.includes('github.io');
+    
+    if (isGitHubPages) {
+      // Attempt to patch the prefetch mechanism
+      const originalPush = window.history.pushState;
+      window.history.pushState = function() {
+        try {
+          return originalPush.apply(this, arguments as any);
+        } catch (e) {
+          console.debug('Prevented prefetch error:', e);
+          return;
+        }
+      };
+      
+      // Intercept fetch calls to prevent 404 errors on .txt files
+      const originalFetch = window.fetch;
+      window.fetch = function(input: RequestInfo | URL, init?: RequestInit) {
+        // If the URL is a .txt file on GitHub Pages, don't fetch it
+        if (typeof input === 'string' && 
+            input.includes('.txt') && 
+            input.includes('github.io')) {
+          console.debug('Prevented fetch for:', input);
+          return Promise.resolve(new Response('{}', { status: 200 }));
+        }
+        return originalFetch(input, init);
+      };
+    }
   }
 };
 
@@ -61,13 +96,16 @@ export default function StaticProductPage() {
   
   const { addToCart } = useCart();
   const mainSwiperRef = useRef<SwiperRef>(null);
-  const relatedSectionRef = useRef<HTMLDivElement>(null);
+  const router = useRouter();
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
     // Set cookie consent on first load
     setCookieConsent();
+    
+    // Fix prefetching issues on GitHub Pages
+    disablePrefetchForGitHubPages();
 
     // ID-ის ამოღება localStorage-დან
     const storedId = localStorage.getItem('currentProductId');
@@ -83,15 +121,35 @@ export default function StaticProductPage() {
     // Add an error handler for missing resources
     const handleError = (event: ErrorEvent) => {
       // Check if the error is from a 404 resource and ignore it
-      if (event.message.includes('404') || event.filename?.includes('index.txt')) {
+      if (event.message?.includes('404') || 
+          event.filename?.includes('index.txt') || 
+          (event.message && event.message.toString().includes('.txt'))) {
         event.preventDefault();
-        console.debug('Prevented 404 error from being logged:', event.message);
+        console.debug('Prevented error from being logged:', event.message);
+        return true; // Prevents the error from propagating
       }
+      return false;
     };
 
-    window.addEventListener('error', handleError);
+    window.addEventListener('error', handleError as any);
+    
+    // Setup unhandled promise rejection handler
+    const handleUnhandledRejection = (event: PromiseRejectionEvent) => {
+      if (event.reason && 
+         (event.reason.toString().includes('404') || 
+          event.reason.toString().includes('.txt'))) {
+        event.preventDefault();
+        console.debug('Prevented unhandled rejection:', event.reason);
+        return true;
+      }
+      return false;
+    };
+    
+    window.addEventListener('unhandledrejection', handleUnhandledRejection);
+
     return () => {
-      window.removeEventListener('error', handleError);
+      window.removeEventListener('error', handleError as any);
+      window.removeEventListener('unhandledrejection', handleUnhandledRejection);
     };
   }, []);
 
@@ -293,6 +351,21 @@ export default function StaticProductPage() {
       }
     };
   }, [showModal]);
+
+  // Override the product link to prevent prefetching issues
+  const navigateToProduct = (productId: string) => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('currentProductId', productId);
+      
+      // Force a full page load instead of client-side navigation
+      const isGitHubPages = window.location.hostname.includes('github.io');
+      if (isGitHubPages) {
+        window.location.href = '/shop/static-product';
+      } else {
+        router.push('/static-product');
+      }
+    }
+  };
 
   if (isLoading) {
     return (
@@ -630,28 +703,28 @@ export default function StaticProductPage() {
                 <div> 
                   {filteredProducts.length > 0 ? (
                     <div className="grid grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-1 sm:gap-2 md:gap-3 lg:gap-4 mx-auto" style={{ maxWidth: '1200px' }}>
-                      {/* Use different slices based on screen size with CSS */}
                       {filteredProducts.slice(0, 25).map((relatedProduct, index) => (
                         <div 
                           key={relatedProduct.id} 
                           className={`transform scale-[0.85] sm:scale-[0.9] md:scale-95 lg:scale-100 origin-top-left
                             ${index >= 9 ? 'hidden lg:block' : ''} 
                             ${index >= 16 ? 'hidden xl:block' : ''}`}
+                          onClick={() => navigateToProduct(relatedProduct.id)}
                         >
-                    <ProductCard 
-                      product={relatedProduct}
-                    />
+                          <ProductCard 
+                            product={relatedProduct}
+                          />
                         </div>
-                  ))}
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-center py-12 bg-gray-50 rounded-lg">
+                      <p className="text-muted-foreground">ფილტრის კრიტერიუმებით პროდუქტები ვერ მოიძებნა</p>
+                    </div>
+                  )}
                 </div>
-              ) : (
-                <div className="text-center py-12 bg-gray-50 rounded-lg">
-                  <p className="text-muted-foreground">ფილტრის კრიტერიუმებით პროდუქტები ვერ მოიძებნა</p>
-                </div>
-              )}
-            </div>
-          </div>
-        )}
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -833,4 +906,4 @@ export default function StaticProductPage() {
       )}
     </ShopLayout>
   );
-} 
+}
