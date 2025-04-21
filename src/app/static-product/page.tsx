@@ -46,28 +46,104 @@ const disablePrefetchForGitHubPages = () => {
     const isGitHubPages = window.location.hostname.includes('github.io');
     
     if (isGitHubPages) {
-      // Attempt to patch the prefetch mechanism
-      const originalPush = window.history.pushState;
-      window.history.pushState = function() {
-        try {
-          return originalPush.apply(this, arguments as any);
-        } catch (e) {
-          console.debug('Prevented prefetch error:', e);
-          return;
-        }
-      };
+      // Fix CSS preload warnings by ensuring proper 'as' attribute
+      setTimeout(() => {
+        document.querySelectorAll('link[rel="preload"][href*=".css"]').forEach(link => {
+          if (link instanceof HTMLLinkElement && !link.hasAttribute('as')) {
+            link.setAttribute('as', 'style');
+          }
+        });
+      }, 0);
+      
+      // Disable all prefetching
+      try {
+        // Attempt to manually disable Next.js prefetching
+        const linkElements = document.querySelectorAll('link[rel="prefetch"]');
+        linkElements.forEach(link => {
+          link.setAttribute('rel', 'disabled-prefetch');
+        });
+        
+        // Create a MutationObserver to disable new prefetch links
+        const observer = new MutationObserver((mutations) => {
+          mutations.forEach((mutation) => {
+            if (mutation.addedNodes) {
+              mutation.addedNodes.forEach((node) => {
+                if (node.nodeName === 'LINK' && 
+                    node instanceof HTMLLinkElement && 
+                    node.rel === 'prefetch') {
+                  node.setAttribute('rel', 'disabled-prefetch');
+                }
+              });
+            }
+          });
+        });
+        
+        // Start observing
+        observer.observe(document.head, { childList: true, subtree: true });
+        
+        // Patch history.pushState to prevent Next.js prefetch errors
+        const originalPush = window.history.pushState;
+        window.history.pushState = function() {
+          try {
+            return originalPush.apply(this, arguments as any);
+          } catch (e) {
+            console.debug('Prevented prefetch error:', e);
+            return;
+          }
+        };
+      } catch (error) {
+        console.debug('Error while disabling prefetching:', error);
+      }
       
       // Intercept fetch calls to prevent 404 errors on .txt files
       const originalFetch = window.fetch;
       window.fetch = function(input: RequestInfo | URL, init?: RequestInit) {
         // If the URL is a .txt file on GitHub Pages, don't fetch it
         if (typeof input === 'string' && 
-            input.includes('.txt') && 
-            input.includes('github.io')) {
+            (input.includes('.txt') || input.includes('?_rsc=')) && 
+            (input.includes('github.io') || input.includes('/shop/'))) {
           console.debug('Prevented fetch for:', input);
           return Promise.resolve(new Response('{}', { status: 200 }));
         }
         return originalFetch(input, init);
+      };
+      
+      // Also intercept XMLHttpRequest for older code
+      const originalOpen = XMLHttpRequest.prototype.open;
+      // @ts-ignore - Overriding browser API for prefetch prevention
+      XMLHttpRequest.prototype.open = function(method, url, ...rest) {
+        if (typeof url === 'string' && 
+            (url.includes('.txt') || url.includes('?_rsc=')) && 
+            (url.includes('github.io') || url.includes('/shop/'))) {
+          console.debug('Prevented XHR for:', url);
+          // Redirect to a blank response
+          // @ts-ignore - Type safety for rest parameters
+          return originalOpen.call(this, method, 'data:text/plain,{}', ...rest);
+        }
+        // @ts-ignore - Type safety for rest parameters
+        return originalOpen.call(this, method, url, ...rest);
+      };
+      
+      // Disable IntersectionObserver that might be triggering prefetches
+      const originalIntersectionObserver = window.IntersectionObserver;
+      // @ts-ignore - Overriding browser API for prefetch prevention
+      window.IntersectionObserver = function(callback, options) {
+        const wrappedCallback = (entries: IntersectionObserverEntry[], observer: IntersectionObserver) => {
+          // Filter out entries that might trigger prefetching
+          const filteredEntries = entries.filter(entry => {
+            const element = entry.target;
+            if (element instanceof HTMLAnchorElement && element.getAttribute('href')?.includes('/product/')) {
+              return false; // Skip prefetching for product links
+            }
+            return true;
+          });
+          
+          if (filteredEntries.length > 0) {
+            callback(filteredEntries, observer);
+          }
+        };
+        
+        return new originalIntersectionObserver(wrappedCallback, options);
       };
     }
   }
