@@ -1149,13 +1149,12 @@ export const getEscrowAgentId = async (): Promise<string | null> => {
 };
 
 // Escrow Agent-თან შეტყობინების გაგზავნის ფუნქცია
-export const sendMessageToEscrowAgent = async (text: string, chatRoomId: string, productId?: string): Promise<void> => {
+export const sendMessageToEscrowAgent = async (text: string, productId?: string): Promise<void> => {
   if (!auth.currentUser) throw new Error('You must be logged in');
 
   try {
     console.log('💬 DEBUG: sendMessageToEscrowAgent გამოძახებულია', {
       text: text.substring(0, 20) + (text.length > 20 ? '...' : ''),
-      chatRoomId,
       productId,
       currentUser: auth.currentUser.uid,
       callStack: new Error().stack
@@ -1163,282 +1162,120 @@ export const sendMessageToEscrowAgent = async (text: string, chatRoomId: string,
     
     const escrowAgentUserId = await getEscrowAgentId() || 'escrow_agent'; 
     const currentUser = auth.currentUser; 
+    
+    // შევქმნათ ფიქსირებული ID ესქროუ აგენტის ჩატისთვის
     const finalProductId = productId || 'general_escrow';
+    const systemMessageRoomId = 'escrow_agent'; 
 
-    // შევამოწმოთ არსებული ჩატის ოთახი
-    const roomRef = ref(rtdb, `chatRooms/${chatRoomId}`);
+    console.log('💬 DEBUG: sendMessageToEscrowAgent - იყენებს ოთახის ID:', {
+      systemMessageRoomId,
+      escrowAgentUserId,
+      finalProductId
+    });
+
+    // შევამოწმოთ და შევქმნათ ჩატის ოთახი
+    const roomRef = ref(rtdb, `chatRooms/${systemMessageRoomId}`);
     const roomSnapshot = await get(roomRef);
     
+    const commonRoomData = {
+      lastMessage: text,
+      lastMessageTimestamp: Date.now(),
+      lastSenderId: currentUser.uid,
+      participants: Array.from(new Set([...(roomSnapshot.val()?.participants || []), currentUser.uid, escrowAgentUserId])),
+      productId: finalProductId
+    };
+
     if (!roomSnapshot.exists()) {
-      throw new Error('Chat room does not exist');
+      console.log('💬 DEBUG: sendMessageToEscrowAgent - Creating new escrow room');
+      await set(roomRef, {
+        ...commonRoomData,
+        createdAt: serverTimestamp(),
+      });
+    } else {
+      console.log('💬 DEBUG: sendMessageToEscrowAgent - Updating existing escrow room', {
+        roomData: roomSnapshot.val()
+      });
+      await update(roomRef, commonRoomData);
     }
 
-    // დავამატოთ ესკროუ აგენტი მონაწილეებში, თუ უკვე არ არის
-    const roomData = roomSnapshot.val();
-    let participants = Array.isArray(roomData.participants) ? roomData.participants : [];
+    // შევამოწმოთ userChats ჩანაწერები ორივე მომხმარებლისთვის და შევქმნათ თუ არ არსებობს
+    const userEscrowChatRef = ref(rtdb, `userChats/${currentUser.uid}/${systemMessageRoomId}`);
+    const userChatSnapshot = await get(userEscrowChatRef);
     
-    if (!participants.includes(escrowAgentUserId)) {
-      console.log('💬 DEBUG: Adding escrow agent to participants', { 
-        currentParticipants: participants,
-        escrowAgentUserId 
+    if (!userChatSnapshot.exists()) {
+      console.log('💬 DEBUG: sendMessageToEscrowAgent - Creating user chat entry');
+      await set(userEscrowChatRef, { 
+      lastMessage: text, 
+        lastMessageTimestamp: Date.now(),
+      unreadCount: 0,
+        productId: finalProductId,
+        otherUserId: escrowAgentUserId
       });
-      
-      // ახალ მასივში ვამატებთ ესკროუ აგენტს თუ ის უკვე არ არის მასივში
-      participants = [...participants, escrowAgentUserId];
-      
-      await update(roomRef, {
-        participants: participants,
-        hasEscrowAgent: true
+    } else {
+      console.log('💬 DEBUG: sendMessageToEscrowAgent - Updating user chat entry', {
+        userData: userChatSnapshot.val()
       });
-      
-      console.log('💬 DEBUG: Updated participants array', { newParticipants: participants });
+      await update(userEscrowChatRef, { 
+        lastMessage: text, 
+        lastMessageTimestamp: Date.now(),
+        productId: finalProductId
+      });
     }
 
-    // დავამატოთ შეტყობინება ამ ჩატში
-    const messagesRef = ref(rtdb, `messages/${chatRoomId}`);
+    // განვაახლოთ ან შევქმნათ აგენტის ჩანაწერი
+    if (escrowAgentUserId !== 'escrow_agent') {
+      const agentChatRef = ref(rtdb, `userChats/${escrowAgentUserId}/${systemMessageRoomId}`);
+      const agentChatSnapshot = await get(agentChatRef);
+      
+      if (!agentChatSnapshot.exists()) {
+        console.log('💬 DEBUG: sendMessageToEscrowAgent - Creating agent chat entry');
+        await set(agentChatRef, {
+        lastMessage: text,
+          lastMessageTimestamp: Date.now(),
+          unreadCount: 1,
+          productId: finalProductId,
+          otherUserId: currentUser.uid
+        });
+      } else {
+        console.log('💬 DEBUG: sendMessageToEscrowAgent - Updating agent chat entry', {
+          agentData: agentChatSnapshot.val()
+        });
+        const agentData = agentChatSnapshot.val();
+        await update(agentChatRef, {
+          lastMessage: text,
+          lastMessageTimestamp: Date.now(),
+          unreadCount: (agentData.unreadCount || 0) + 1,
+          productId: finalProductId
+        });
+      }
+    }
+
+    // დავამატოთ ახალი შეტყობინება
+    const messagesRef = ref(rtdb, `messages/${systemMessageRoomId}`);
     const newMessageRef = push(messagesRef);
-    
-    // სისტემური შეტყობინება ესკროუ აგენტის შემოსვლის შესახებ
-    const systemMessage: ChatMessage = {
-      text: '🛡️ Escrow Agent შემოვიდა ჩატში და უსმენს თქვენს საუბარს. აგენტი დაგეხმარებათ ტრანზაქციის უსაფრთხოდ განხორციელებაში.',
-      senderId: 'system',
-      senderName: 'System',
-      recipientId: 'all',
+    const userMessage: ChatMessage = {
+      text,
+      senderId: currentUser.uid,
+      senderName: currentUser.displayName || 'User',
+      recipientId: escrowAgentUserId, 
       timestamp: Date.now(),
-      read: false,
-      messageType: 'text'
+      read: false, 
+          messageType: 'text',
+      productId: finalProductId
     };
     
-    await set(newMessageRef, systemMessage);
-    
-    // განვაახლოთ ჩატის ოთახის ინფორმაცია
-    await update(roomRef, {
-      lastMessage: systemMessage.text,
-      lastMessageTimestamp: Date.now(),
-      lastSenderId: 'system',
-      escrowAgentActive: true
+    console.log('💬 DEBUG: sendMessageToEscrowAgent - გზავნის შეტყობინებას ესქროუ აგენტთან');
+    await set(newMessageRef, userMessage);
+    console.log('💬 DEBUG: sendMessageToEscrowAgent - შეტყობინება დაემატა:', {
+      messageId: newMessageRef.key,
+      roomId: systemMessageRoomId,
+      message: userMessage
     });
-    
-    // ვუზრუნველყოთ რომ ესკროუ აგენტს ჰქონდეს წვდომა ამ ჩატზე თავის userChats სიაში
-    const agentChatRef = ref(rtdb, `userChats/${escrowAgentUserId}/${chatRoomId}`);
-    await set(agentChatRef, {
-      lastMessage: systemMessage.text,
-      lastMessageTimestamp: Date.now(),
-      unreadCount: 1,
-      productId: finalProductId,
-      otherUserId: currentUser.uid
-    });
-    
-    // ასევე შევინახოთ ამ escrow request-ის შესახებ ინფორმაცია, რომ აგენტებს ჰქონდეთ წვდომა
-    const escrowRequestsRef = ref(rtdb, `escrowRequests/${chatRoomId}`);
-    await set(escrowRequestsRef, {
-      chatRoomId: chatRoomId,
-      requesterId: currentUser.uid,
-      requesterName: currentUser.displayName || 'User',
-      requestTimestamp: Date.now(),
-      participants: participants,
-      status: 'active',
-      productId: finalProductId
-    });
-
-    console.log('💬 DEBUG: Escrow agent successfully joined the chat', { chatRoomId });
+    console.log('💬 DEBUG: შეტყობინება წარმატებით გაიგზავნა ესქროუ აგენტთან');
     
   } catch (error) {
     console.error('❌ ERROR: sendMessageToEscrowAgent შეცდომა:', error);
     throw error;
-  }
-};
-
-// ახალი ფუნქცია - Escrow Agent-ის მიერ შეტყობინების გაგზავნა ჩატში
-export const sendMessageAsEscrowAgent = async (text: string, chatRoomId: string): Promise<void> => {
-  if (!auth.currentUser) throw new Error('You must be logged in');
-
-  try {
-    console.log('💬 DEBUG: sendMessageAsEscrowAgent გამოძახებულია', {
-      text: text.substring(0, 20) + (text.length > 20 ? '...' : ''),
-      chatRoomId,
-      currentUser: auth.currentUser.uid,
-      callStack: new Error().stack
-    });
-
-    // შევამოწმოთ არის თუ არა მომხმარებელი ესკროუ აგენტი
-    const isAgent = await isUserEscrowAgent(auth.currentUser.uid);
-    console.log('💬 DEBUG: sendMessageAsEscrowAgent - არის თუ არა აგენტი:', isAgent);
-    
-    if (!isAgent) {
-      console.error('❌ ERROR: მხოლოდ ესკროუ აგენტებს შეუძლიათ გააგზავნონ შეტყობინებები როგორც აგენტებმა');
-      throw new Error('Only escrow agents can send messages as escrow agent');
-    }
-
-    // შევამოწმოთ არსებული ჩატის ოთახი
-    const roomRef = ref(rtdb, `chatRooms/${chatRoomId}`);
-    const roomSnapshot = await get(roomRef);
-    
-    if (!roomSnapshot.exists()) {
-      console.error('❌ ERROR: ჩატის ოთახი არ არსებობს');
-      throw new Error('Chat room does not exist');
-    }
-
-    console.log('💬 DEBUG: sendMessageAsEscrowAgent - ოთახი ნაპოვნია', {
-      chatRoomId,
-      roomData: roomSnapshot.val()
-    });
-
-    // დავამატოთ შეტყობინება ამ ჩატში
-    const messagesRef = ref(rtdb, `messages/${chatRoomId}`);
-    const newMessageRef = push(messagesRef);
-    
-    // ესკროუ აგენტის შეტყობინება
-    const agentMessage: ChatMessage = {
-      text: text,
-      senderId: 'escrow_agent',
-      senderName: 'Escrow Agent',
-      recipientId: 'all',
-      timestamp: Date.now(),
-      read: false,
-      messageType: 'text'
-    };
-    
-    await set(newMessageRef, agentMessage);
-    console.log('💬 DEBUG: sendMessageAsEscrowAgent - შეტყობინება დაემატა', {
-      messageId: newMessageRef.key,
-      chatRoomId
-    });
-    
-    // განვაახლოთ ჩატის ოთახის ინფორმაცია
-    await update(roomRef, {
-      lastMessage: text,
-      lastMessageTimestamp: Date.now(),
-      lastSenderId: 'escrow_agent',
-      hasEscrowAgent: true // დავამატოთ მარკერი, რომ ეს ოთახი აქტიურია ესკროუ აგენტისთვის
-    });
-    console.log('💬 DEBUG: sendMessageAsEscrowAgent - ჩატის ოთახი განახლდა');
-    
-    // განვაახლოთ წაკითხვის სტატუსი ყველა მონაწილისთვის გარდა აგენტისა
-    const participants = roomSnapshot.val().participants || [];
-    console.log('💬 DEBUG: sendMessageAsEscrowAgent - ვაახლებთ unreadCount ყველა მონაწილისთვის', {
-      participants
-    });
-    
-    for (const participantId of participants) {
-      if (participantId !== 'escrow_agent' && participantId !== auth.currentUser.uid) {
-        const participantChatRef = ref(rtdb, `userChats/${participantId}/${chatRoomId}`);
-        const participantChatSnapshot = await get(participantChatRef);
-        
-        if (participantChatSnapshot.exists()) {
-          const participantData = participantChatSnapshot.val();
-          await update(participantChatRef, {
-            lastMessage: text,
-            lastMessageTimestamp: Date.now(),
-            unreadCount: (participantData.unreadCount || 0) + 1
-          });
-          console.log('💬 DEBUG: sendMessageAsEscrowAgent - მონაწილის userChat განახლდა', {
-            participantId,
-            unreadCount: participantData.unreadCount + 1
-          });
-        } else {
-          console.log('💬 DEBUG: sendMessageAsEscrowAgent - მონაწილის userChat არ არსებობს', {
-            participantId
-          });
-        }
-      }
-    }
-    
-    console.log('💬 DEBUG: sendMessageAsEscrowAgent - შეტყობინება წარმატებით გაიგზავნა');
-  } catch (error) {
-    console.error('❌ ERROR: sendMessageAsEscrowAgent შეცდომა:', error);
-    throw error;
-  }
-};
-
-// დამხმარე ფუნქცია, რომელიც ამოწმებს არის თუ არა მომხმარებელი Escrow Agent
-export const isUserEscrowAgent = async (userId: string): Promise<boolean> => {
-  try {
-    console.log('💬 DEBUG: isUserEscrowAgent ამოწმებს მომხმარებელს:', userId);
-    
-    // 1. RTDB-ში შემოწმება
-    const userSnapshot = await get(ref(rtdb, `users/${userId}`));
-    
-    if (userSnapshot.exists()) {
-      const userData = userSnapshot.val();
-      console.log('💬 DEBUG: isUserEscrowAgent - ნაპოვნია RTDB-ში:', userData);
-      if (userData.role === 'escrow_agent' || userData.role === 'admin') {
-        console.log('💬 DEBUG: isUserEscrowAgent - დადასტურებულია RTDB როლიდან');
-        return true;
-      }
-    }
-    
-    // 2. Firestore-ში users კოლექციაში შემოწმება
-    const { getDoc, doc, collection, query, where, getDocs } = await import('firebase/firestore');
-    const { db } = await import('@/lib/firebase');
-    
-    const userDocRef = doc(db, 'users', userId);
-    const userDoc = await getDoc(userDocRef);
-    
-    if (userDoc.exists()) {
-      const userData = userDoc.data();
-      console.log('💬 DEBUG: isUserEscrowAgent - ნაპოვნია Firestore users-ში:', userData);
-      
-      if (userData.role === 'escrow_agent' || userData.role === 'admin' || userData.admin === true) {
-        console.log('💬 DEBUG: isUserEscrowAgent - დადასტურებულია Firestore users-იდან');
-        return true;
-      }
-      
-      // 3. თუ არის email, შევამოწმოთ roles კოლექციაში
-      if (userData.email) {
-        console.log('💬 DEBUG: isUserEscrowAgent - მოწმდება email:', userData.email);
-        
-        const roleDocRef = doc(db, 'roles', userData.email);
-        const roleDoc = await getDoc(roleDocRef);
-        
-        if (roleDoc.exists()) {
-          const roleData = roleDoc.data();
-          console.log('💬 DEBUG: isUserEscrowAgent - ნაპოვნია როლი:', roleData);
-          
-          if (roleData.role === 'escrow_agent' || roleData.role === 'admin') {
-            console.log('💬 DEBUG: isUserEscrowAgent - დადასტურებულია Firestore roles-იდან');
-            return true;
-          }
-        }
-        
-        // 4. ასევე შევამოწმოთ roles კოლექციაში query-თი
-        const rolesRef = collection(db, 'roles');
-        const q = query(rolesRef, where('email', '==', userData.email));
-        const querySnapshot = await getDocs(q);
-        
-        if (!querySnapshot.empty) {
-          const roleDoc = querySnapshot.docs[0];
-          const roleData = roleDoc.data();
-          console.log('💬 DEBUG: isUserEscrowAgent - ნაპოვნია როლი query-დან:', roleData);
-          
-          if (roleData.role === 'escrow_agent' || roleData.role === 'admin') {
-            console.log('💬 DEBUG: isUserEscrowAgent - დადასტურებულია Firestore roles query-დან');
-            return true;
-          }
-        }
-        
-        // 5. შევამოწმოთ UID-ით
-        const rolesUidQuery = query(rolesRef, where('uid', '==', userId));
-        const rolesUidSnapshot = await getDocs(rolesUidQuery);
-        
-        if (!rolesUidSnapshot.empty) {
-          const roleDoc = rolesUidSnapshot.docs[0];
-          const roleData = roleDoc.data();
-          console.log('💬 DEBUG: isUserEscrowAgent - ნაპოვნია როლი UID-ით:', roleData);
-          
-          if (roleData.role === 'escrow_agent' || roleData.role === 'admin') {
-            console.log('💬 DEBUG: isUserEscrowAgent - დადასტურებულია Firestore roles-იდან UID-ით');
-            return true;
-          }
-        }
-      }
-    }
-    
-    console.log('💬 DEBUG: isUserEscrowAgent - მომხმარებელი არ არის escrow აგენტი');
-    return false;
-  } catch (error) {
-    console.error('Error checking if user is escrow agent:', error);
-    return false;
   }
 };
 

@@ -84,17 +84,11 @@ service cloud.firestore {
     // ჩატის ოთახები
     "chatRooms": {
       "$roomId": {
-        // წაკითხვა მხოლოდ ოთახის მონაწილეებისთვის და ესკროუ აგენტებისთვის, თუ ოთახში არის hasEscrowAgent ფლაგი
-        ".read": "auth !== null && ((data.child('participants').val() !== null && data.child('participants').val().indexOf(auth.uid) !== -1) || (data.child('hasEscrowAgent').val() === true && root.child('users').child(auth.uid).child('role').val() === 'escrow_agent') || (data.child('hasEscrowAgent').val() === true && root.child('users').child(auth.uid).child('role').val() === 'admin'))",
+        // წაკითხვა მხოლოდ ოთახის მონაწილეებისთვის
+        ".read": "auth !== null && (data.child('participants').val() !== null && data.child('participants').val().indexOf(auth.uid) !== -1)",
         
-        // შექმნა მხოლოდ ავტორიზებული მომხმარებლებისთვის, რომლებიც ოთახის მონაწილეები არიან ან ესკროუ აგენტია
-        ".write": "auth !== null && (data.child('participants').val() === null || data.child('participants').val().indexOf(auth.uid) !== -1 || newData.child('participants').val().indexOf(auth.uid) !== -1 || root.child('users').child(auth.uid).child('role').val() === 'escrow_agent' || root.child('users').child(auth.uid).child('role').val() === 'admin')",
-
-        // განხორციელდეს participants მასივის ცვლილებები
-        "participants": {
-          // ესკროუ აგენტებს და ადმინებს შეუძლიათ participants მასივის მოდიფიკაცია
-          ".write": "auth !== null && (root.child('users').child(auth.uid).child('role').val() === 'escrow_agent' || root.child('users').child(auth.uid).child('role').val() === 'admin')"
-        },
+        // შექმნა მხოლოდ ავტორიზებული მომხმარებლებისთვის, რომლებიც ოთახის მონაწილეები არიან
+        ".write": "auth !== null && (data.child('participants').val() === null || data.child('participants').val().indexOf(auth.uid) !== -1 || newData.child('participants').val().indexOf(auth.uid) !== -1)",
         
         // უნდა ჰქონდეს მინიმუმ 2 მონაწილე
         ".validate": "newData.hasChild('participants') && newData.child('participants').isArray() && newData.child('participants').val().length >= 2"
@@ -104,19 +98,19 @@ service cloud.firestore {
     // შეტყობინებები
     "messages": {
       "$roomId": {
-        // წაკითხვა მხოლოდ ოთახის მონაწილეებისთვის, ამოწმებს chatRooms-ში ან ესკროუ აგენტისთვის, თუ ოთახში არის hasEscrowAgent
-        ".read": "auth !== null && (root.child('chatRooms').child($roomId).child('participants').val() !== null && root.child('chatRooms').child($roomId).child('participants').val().indexOf(auth.uid) !== -1) || (auth !== null && root.child('chatRooms').child($roomId).child('hasEscrowAgent').val() === true && (root.child('users').child(auth.uid).child('role').val() === 'escrow_agent' || root.child('users').child(auth.uid).child('role').val() === 'admin'))",
+        // წაკითხვა მხოლოდ ოთახის მონაწილეებისთვის, ამოწმებს chatRooms-ში
+        ".read": "auth !== null && root.child('chatRooms').child($roomId).child('participants').val() !== null && root.child('chatRooms').child($roomId).child('participants').val().indexOf(auth.uid) !== -1",
         
-        // შეტყობინების გაგზავნა მხოლოდ ავტორიზებული მომხმარებლებისთვის, რომლებიც ოთახის მონაწილეები არიან ან ესკროუ აგენტია
-        ".write": "auth !== null && ((root.child('chatRooms').child($roomId).child('participants').val() !== null && root.child('chatRooms').child($roomId).child('participants').val().indexOf(auth.uid) !== -1) || (root.child('chatRooms').child($roomId).child('hasEscrowAgent').val() === true && (root.child('users').child(auth.uid).child('role').val() === 'escrow_agent' || root.child('users').child(auth.uid).child('role').val() === 'admin')))",
+        // შეტყობინების გაგზავნა მხოლოდ ავტორიზებული მომხმარებლებისთვის, რომლებიც ოთახის მონაწილეები არიან
+        ".write": "auth !== null && root.child('chatRooms').child($roomId).child('participants').val() !== null && root.child('chatRooms').child($roomId).child('participants').val().indexOf(auth.uid) !== -1",
         
         "$messageId": {
           // შეტყობინება უნდა შეიცავდეს აუცილებელ ველებს
           ".validate": "newData.hasChild('senderId') && newData.hasChild('text') && newData.hasChild('timestamp') && newData.hasChild('recipientId')",
           
-          // გამგზავნის ID უნდა ემთხვეოდეს მიმდინარე მომხმარებლის ID-ს ან იყოს სისტემური/ესკროუ
+          // გამგზავნის ID უნდა ემთხვეოდეს მიმდინარე მომხმარებლის ID-ს
           "senderId": {
-            ".validate": "newData.val() === auth.uid || newData.val() === 'system' || (newData.val() === 'escrow_agent' && (root.child('users').child(auth.uid).child('role').val() === 'escrow_agent' || root.child('users').child(auth.uid).child('role').val() === 'admin'))"
+            ".validate": "newData.val() === auth.uid || newData.val() === 'system' || newData.val() === 'escrow_agent'"
           }
         }
       }
@@ -125,11 +119,11 @@ service cloud.firestore {
     // მომხმარებლის ჩატები
     "userChats": {
       "$userId": {
-        // წაკითხვა მხოლოდ მფლობელისთვის ან ადმინისთვის
-        ".read": "auth !== null && (auth.uid === $userId || root.child('users').child(auth.uid).child('role').val() === 'admin')",
+        // წაკითხვა მხოლოდ მფლობელისთვის
+        ".read": "auth !== null && auth.uid === $userId",
         
-        // წერა მხოლოდ იმ შემთხვევაში, თუ მომხმარებელი არის ოთახის მონაწილე ან ადმინი/ესკროუ აგენტი
-        ".write": "auth !== null && (auth.uid === $userId || root.child('users').child(auth.uid).child('role').val() === 'admin' || root.child('users').child(auth.uid).child('role').val() === 'escrow_agent')",
+        // წერა მხოლოდ იმ შემთხვევაში, თუ მომხმარებელი არის ოთახის მონაწილე
+        ".write": "auth !== null && (auth.uid === $userId || root.child('chatRooms').child($roomId).child('participants').val().indexOf(auth.uid) !== -1)",
         
         "$roomId": {
           // ჩატი უნდა შეიცავდეს აუცილებელ ველებს
@@ -138,28 +132,11 @@ service cloud.firestore {
       }
     },
     
-    // escrow მოთხოვნები
-    "escrowRequests": {
-      // წაკითხვა და წერა მხოლოდ ესკროუ აგენტებისთვის და ადმინებისთვის
-      ".read": "auth !== null && (root.child('users').child(auth.uid).child('role').val() === 'escrow_agent' || root.child('users').child(auth.uid).child('role').val() === 'admin')",
-      ".write": "auth !== null && (root.child('users').child(auth.uid).child('role').val() === 'escrow_agent' || root.child('users').child(auth.uid).child('role').val() === 'admin')",
-      
-      // ინდივიდუალური მოთხოვნები შეუძლია წაიკითხოს მფლობელმაც
-      "$requestId": {
-        ".read": "auth !== null && (data.child('requesterId').val() === auth.uid || root.child('users').child(auth.uid).child('role').val() === 'escrow_agent' || root.child('users').child(auth.uid).child('role').val() === 'admin')",
-        ".write": "auth !== null && (data.child('requesterId').val() === auth.uid || root.child('users').child(auth.uid).child('role').val() === 'escrow_agent' || root.child('users').child(auth.uid).child('role').val() === 'admin')"
-      }
-    },
-    
-    // მომხმარებლები
-    "users": {
-      "$userId": {
-        // წაკითხვა მხოლოდ მფლობელისთვის ან ადმინისთვის
-        ".read": "auth !== null && (auth.uid === $userId || root.child('users').child(auth.uid).child('role').val() === 'admin')",
-        
-        // წერა მხოლოდ მფლობელისთვის ან ადმინისთვის
-        ".write": "auth !== null && (auth.uid === $userId || root.child('users').child(auth.uid).child('role').val() === 'admin')"
-      }
+    // escrow_agent სპეციალური წესები
+    "escrow_agent": {
+      // წვდომა მხოლოდ Escrow Agent როლის მქონე მომხმარებლებისთვის
+      ".read": "auth !== null && root.child('users').child(auth.uid).child('role').val() === 'escrow_agent' || auth !== null && root.child('users').child(auth.uid).child('role').val() === 'admin'",
+      ".write": "auth !== null && root.child('users').child(auth.uid).child('role').val() === 'escrow_agent' || auth !== null && root.child('users').child(auth.uid).child('role').val() === 'admin'"
     }
   }
 }

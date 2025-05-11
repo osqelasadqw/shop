@@ -9,7 +9,6 @@ import { getDoc, doc, DocumentData } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { MessageCircle, Search } from 'lucide-react';
 import { Input } from "@/components/ui/input";
-import { useSearchParams } from 'react-router-dom';
 
 interface UserInfo {
   id: string;
@@ -25,18 +24,6 @@ const Messages: React.FC = () => {
   const [participants, setParticipants] = useState<Record<string, UserInfo>>({});
   const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(true);
-  const [searchParams] = useSearchParams();
-
-  // URL-დან ჩატის ოთახის პარამეტრის ამოღება
-  useEffect(() => {
-    const roomIdFromURL = searchParams.get('room');
-    if (roomIdFromURL) {
-      console.log('💬 DEBUG: Messages.tsx - URL-დან მიღებული roomId:', roomIdFromURL);
-      // რუმის ID შევინახოთ localStorage-ში, რომ შემდეგ ძირითადმა useEffect-მა გამოიყენოს
-      // როცა ჩატის ოთახების სია ჩაიტვირთება
-      localStorage.setItem('selectedChatRoomId', roomIdFromURL);
-    }
-  }, [searchParams]);
 
   // Load chat rooms
   useEffect(() => {
